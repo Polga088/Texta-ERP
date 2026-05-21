@@ -10,7 +10,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@texta.local");
+  const [email, setEmail] = useState("admin@texta.app");
   const [password, setPassword] = useState("Admin123!");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

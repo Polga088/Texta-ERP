@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from src.models.organization import GlobalRole
-from src.schemas.common import BaseSchema, TimestampSchema
+from src.schemas.common import BaseSchema, EmailAddress, TimestampSchema
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: EmailAddress
     password: str
 
 
 class RegisterRequest(BaseModel):
-    email: EmailStr
+    email: EmailAddress
     password: str = Field(min_length=8)
     full_name: str = Field(min_length=2)
     organization_name: str = Field(min_length=2)
@@ -41,7 +41,7 @@ class UserResponse(TimestampSchema):
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: EmailAddress
     password: str = Field(min_length=8)
     full_name: str
     global_role: GlobalRole = GlobalRole.MEMBER
