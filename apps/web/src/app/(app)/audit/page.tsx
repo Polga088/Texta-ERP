@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { AuditLog } from "@/types";
 import { Card } from "@/components/ui/card";
 
@@ -14,13 +14,21 @@ export default function AuditPage() {
   useEffect(() => {
     api<AuditLog[]>("/audit/logs")
       .then(setLogs)
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 403) {
+          setError("Accès refusé — rôle administrateur requis.");
+        } else if (e instanceof ApiError && e.status >= 502) {
+          setError("Service API indisponible. Réessayez dans quelques secondes.");
+        } else {
+          setError(e instanceof Error ? e.message : "Erreur de chargement");
+        }
+      });
   }, []);
 
   return (
     <div>
       <h1 className="mb-8 text-3xl font-bold">Journal d&apos;audit</h1>
-      {error && <p className="mb-4 text-red-600">{error} (admin requis)</p>}
+      {error && <p className="mb-4 text-red-600">{error}</p>}
       <Card>
         <table className="w-full text-sm">
           <thead>

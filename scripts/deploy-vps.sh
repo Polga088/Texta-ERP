@@ -11,11 +11,21 @@ if [ ! -f .env ]; then
 fi
 
 echo "==> Build et démarrage des conteneurs production..."
-docker compose -f docker-compose.prod.yml build --no-cache web api
+docker compose -f docker-compose.prod.yml build web api
 docker compose -f docker-compose.prod.yml up -d
 
-echo "==> Attente santé Postgres..."
-sleep 5
+echo "==> Attente santé API..."
+for i in $(seq 1 30); do
+  if docker compose -f docker-compose.prod.yml exec -T api python -c \
+    "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)" 2>/dev/null; then
+    echo "API prête."
+    break
+  fi
+  sleep 2
+done
+
+echo "==> Redémarrage Nginx (recharge DNS Docker)..."
+docker compose -f docker-compose.prod.yml restart nginx
 
 echo "==> Migrations (via entrypoint API au démarrage)"
 docker compose -f docker-compose.prod.yml logs api --tail 20

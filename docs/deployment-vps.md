@@ -115,7 +115,40 @@ docker compose -f docker-compose.prod.yml build web --no-cache
 docker compose -f docker-compose.prod.yml up -d web
 ```
 
-## 5. Mises à jour (sans toucher au Mac)
+## 5. Dépannage Bad Gateway (502) / Auth / Audit
+
+Symptôme : « Bad Gateway » à la connexion ou sur le journal d'audit.
+
+**Cause fréquente** : après un `git pull` + redéploiement, Nginx garde l'ancienne IP du conteneur API → 502.
+
+Sur le VPS :
+
+```bash
+cd /opt/texta-crm
+git pull
+./scripts/deploy-vps.sh
+
+# Diagnostic complet
+chmod +x scripts/diagnose-vps.sh scripts/reset-admin-password.sh
+./scripts/diagnose-vps.sh
+```
+
+Si `/health` répond mais le login échoue avec **401** (pas 502), le mot de passe admin est incorrect :
+
+```bash
+./scripts/reset-admin-password.sh admin@texta.local
+# Copiez le mot de passe affiché et connectez-vous
+```
+
+Vérifications `.env` :
+
+- `CORS_ORIGINS` = exactement l'URL du site (`http://IP` si pas de HTTPS)
+- `JWT_SECRET_KEY` renseigné (`openssl rand -hex 32`)
+- `POSTGRES_PASSWORD` identique partout
+
+Le journal d'audit nécessite un compte **administrateur** (403 si compte membre, 502 si API down).
+
+## 6. Mises à jour (sans toucher au Mac)
 
 Depuis votre Mac, poussez le code (git). Sur le VPS :
 
@@ -125,7 +158,7 @@ git pull
 ./scripts/deploy-vps.sh
 ```
 
-## 6. Commandes utiles
+## 7. Commandes utiles
 
 ```bash
 # Logs

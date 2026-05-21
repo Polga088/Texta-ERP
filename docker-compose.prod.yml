@@ -48,6 +48,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     networks:
       - internal
 
@@ -61,8 +67,17 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      # SSR Next.js : accès direct au conteneur API sur le réseau Docker
+      INTERNAL_API_URL: http://api:8000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - internal
 
@@ -77,8 +92,10 @@ services:
       - certbot_www:/var/www/certbot:ro
       - certbot_certs:/etc/letsencrypt:ro
     depends_on:
-      - web
-      - api
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     networks:
       - internal
 

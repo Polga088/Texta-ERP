@@ -1,12 +1,15 @@
 /**
  * En production derrière Nginx : appels relatifs `/api/v1/...` (même origine).
- * Évite les 404 si NEXT_PUBLIC_API_URL a été mal configuré au build Docker.
+ * Côté serveur (SSR) : INTERNAL_API_URL pointe vers le conteneur `api` Docker.
  */
 function getApiRoot(): string {
   if (typeof window !== "undefined") {
     return "";
   }
-  const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const url =
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8000";
   return url.replace(/\/$/, "");
 }
 
@@ -63,6 +66,12 @@ export async function api<T>(
       throw new ApiError(
         res.status,
         `Service API introuvable (${buildUrl(path)}). Vérifiez Nginx et que l'API tourne.`,
+      );
+    }
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new ApiError(
+        res.status,
+        "Service API indisponible (Bad Gateway). L'API redémarre peut-être — réessayez dans quelques secondes.",
       );
     }
     throw new ApiError(res.status, message || "Erreur API");
