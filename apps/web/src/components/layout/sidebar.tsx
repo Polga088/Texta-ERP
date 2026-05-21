@@ -37,33 +37,36 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-slate-200 bg-slate-950 text-slate-100">
-      <div className="border-b border-slate-800 p-6">
-        <p className="text-xs uppercase tracking-widest text-indigo-400">Texta</p>
-        <h1 className="text-xl font-bold">CRM + ERP</h1>
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-slate-200/80 bg-white/95 px-4 py-6 lg:flex">
+      <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 p-4 text-white shadow-lg">
+        <p className="text-xs uppercase tracking-widest text-indigo-300">Texta</p>
+        <h1 className="mt-1 text-xl font-bold">CRM + ERP</h1>
+        <p className="mt-1 text-xs text-slate-300">Pilotage moderne des opérations</p>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
+
+      <nav className="flex-1 space-y-1.5">
         {nav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
               pathname.startsWith(href)
-                ? "bg-indigo-600 text-white"
-                : "text-slate-400 hover:bg-slate-800 hover:text-white",
+                ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
             )}
           >
-            <Icon size={18} />
+            <Icon size={17} />
             {label}
           </Link>
         ))}
       </nav>
+
       <button
         onClick={logout}
-        className="m-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white"
+        className="mt-4 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900"
       >
-        <LogOut size={18} />
+        <LogOut size={17} />
         Déconnexion
       </button>
     </aside>

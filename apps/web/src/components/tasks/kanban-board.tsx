@@ -4,10 +4,11 @@ import {
   DndContext,
   DragEndEvent,
   PointerSensor,
+  closestCorners,
   useSensor,
   useSensors,
-  closestCorners,
 } from "@dnd-kit/core";
+import { GripVertical } from "lucide-react";
 import { Task } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
@@ -47,43 +48,49 @@ export function KanbanBoard({ tasks, onUpdate }: Props) {
       });
       onUpdate();
     } catch {
-      /* ignore */
+      // silent fallback
     }
   };
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.id);
           return (
-            <div
+            <section
               key={col.id}
               id={col.id}
-              className="min-h-[400px] rounded-xl bg-slate-50 p-4 dark:bg-slate-900"
+              className="min-h-[460px] rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-sm"
             >
-              <h3 className="mb-3 font-semibold text-slate-700 dark:text-slate-300">
-                {col.label}
-                <span className="ml-2 text-sm text-slate-400">({colTasks.length})</span>
-              </h3>
-              <div className="space-y-2">
+              <header className="mb-3 flex items-center justify-between rounded-xl bg-slate-100/90 px-3 py-2">
+                <h3 className="text-sm font-semibold text-slate-700">{col.label}</h3>
+                <span className="rounded-lg bg-white px-2 py-0.5 text-xs font-medium text-slate-500">
+                  {colTasks.length}
+                </span>
+              </header>
+
+              <div className="space-y-2.5">
                 {colTasks.map((task) => (
-                  <div
+                  <article
                     key={task.id}
                     id={task.id}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("taskId", task.id)}
-                    className="cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800"
+                    className="cursor-grab rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md active:cursor-grabbing"
                   >
-                    <p className="font-medium text-sm">{task.title}</p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <p className="line-clamp-2 text-sm font-semibold text-slate-800">{task.title}</p>
+                      <GripVertical size={15} className="text-slate-400" />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
                       <Badge status={task.priority} label={task.priority} />
                       <Badge status={task.status} label={STATUS_LABELS[task.status]} />
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>

@@ -1,21 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { isAuthenticated } from "@/lib/api";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isAuthenticated()) router.replace("/login");
-  }, [router]);
+  }, [router, pathname]);
 
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">{children}</main>
+      <main className="w-full flex-1 p-4 md:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl">{children}</div>
+      </main>
     </div>
   );
 }
