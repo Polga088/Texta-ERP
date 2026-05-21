@@ -13,6 +13,11 @@ export interface Project {
   status: string;
   owner_id?: string;
   account_id?: string;
+  company_name?: string;
+  company_logo_url?: string;
+  project_code?: string;
+  quality_standard?: string;
+  scope_statement?: string;
 }
 
 export interface Task {
@@ -104,4 +109,44 @@ export interface Group {
   name: string;
   description?: string;
   member_count: number;
+}
+
+export interface Lead {
+  id: string;
+  title: string;
+  source?: string;
+  status: "new" | "qualified" | "proposal" | "won" | "lost";
+  estimated_value?: number;
+  expected_close_date?: string;
+  owner_id?: string;
+  notes?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  project_id?: string;
+  sender_id?: string;
+  created_at: string;
+}
+
+export interface UserNotification {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  entity_type?: string;
+  entity_id?: string;
+  created_at: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  project_id: string;
+  task_id?: string;
+  started_at: string;
+  ended_at?: string;
+  duration_minutes: number;
+  note?: string;
+  source: string;
 }

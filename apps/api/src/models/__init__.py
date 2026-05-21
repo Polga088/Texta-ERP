@@ -2,19 +2,24 @@ from __future__ import annotations
 
 from src.models.audit import AuditLog
 from src.models.calendar import CalendarEvent, EventAttendee
-from src.models.crm import Account, Contact, Project
+from src.models.collaboration import ChatMessage, Notification
+from src.models.crm import Account, Contact, Lead, Project
 from src.models.hr import Department, Employee, LeaveRequest
 from src.models.organization import Group, GroupMember, Organization, User
 from src.models.permissions import ProjectPermissionGrant
 from src.models.task import Task
+from src.models.time_tracking import TimeEntry
 
 __all__ = [
     "AuditLog",
     "Account",
     "Contact",
+    "Lead",
     "Project",
     "CalendarEvent",
     "EventAttendee",
+    "ChatMessage",
+    "Notification",
     "Department",
     "Employee",
     "LeaveRequest",
@@ -24,4 +29,5 @@ __all__ = [
     "User",
     "ProjectPermissionGrant",
     "Task",
+    "TimeEntry",
 ]

@@ -79,5 +79,46 @@ class Project(Base, TimestampMixin):
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    company_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    company_logo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    project_code: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    quality_standard: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    scope_statement: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     account: Mapped["Account | None"] = relationship(back_populates="projects")
+
+
+class LeadStatus(str, enum.Enum):
+    NEW = "new"
+    QUALIFIED = "qualified"
+    PROPOSAL = "proposal"
+    WON = "won"
+    LOST = "lost"
+
+
+class Lead(Base, TimestampMixin):
+    __tablename__ = "leads"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    account_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True
+    )
+    contact_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    source: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    status: Mapped[LeadStatus] = mapped_column(
+        Enum(LeadStatus, name="lead_status", values_callable=lambda x: [e.value for e in x]),
+        default=LeadStatus.NEW,
+        nullable=False,
+    )
+    estimated_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2), nullable=True)
+    expected_close_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

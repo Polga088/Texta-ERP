@@ -49,6 +49,21 @@ export default function ProjectDetailPage() {
         <p className="mt-3 max-w-3xl text-sm text-slate-600">
           {project.description || "Aucune description pour ce projet."}
         </p>
+        <div className="mt-4 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
+          <p>
+            <span className="font-medium text-slate-800">Société:</span> {project.company_name || "N/A"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-800">Code projet:</span> {project.project_code || "N/A"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-800">Standard:</span>{" "}
+            {project.quality_standard || "N/A"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-800">Scope:</span> {project.scope_statement || "N/A"}
+          </p>
+        </div>
       </header>
 
       <div className="grid gap-4 xl:grid-cols-3">

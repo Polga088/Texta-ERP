@@ -7,13 +7,16 @@ from src.routers import (
     audit,
     auth,
     calendar,
+    collaboration,
     contacts,
     dashboard,
     grants,
     groups,
     hr,
+    leads,
     projects,
     tasks,
+    time_tracking,
     users,
 )
 
@@ -31,3 +34,6 @@ api_router.include_router(hr.router, prefix="/hr", tags=["hr"])
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
+api_router.include_router(leads.router, prefix="/leads", tags=["leads"])
+api_router.include_router(collaboration.router, prefix="/collaboration", tags=["collaboration"])
+api_router.include_router(time_tracking.router, prefix="/time-entries", tags=["time-tracking"])

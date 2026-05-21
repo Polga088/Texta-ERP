@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Project } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const STATUS_FR: Record<string, string> = {
   lead: "Prospect",
@@ -24,7 +25,12 @@ export default function ProjectsPage() {
 
   return (
     <div>
-      <h1 className="mb-8 text-3xl font-bold">Projets CRM</h1>
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold">Projets CRM</h1>
+        <Link href="/projects/new">
+          <Button>Créer un projet</Button>
+        </Link>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((p) => (
           <Link key={p.id} href={`/projects/${p.id}`}>
