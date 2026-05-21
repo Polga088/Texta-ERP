@@ -1,0 +1,13 @@
+---
+description: Conventions FastAPI et SQLAlchemy
+globs: apps/api/**/*.py
+alwaysApply: false
+---
+
+# API Python
+
+- FastAPI async + SQLAlchemy 2 async (`AsyncSession`)
+- Schémas Pydantic dans `src/schemas/`, modèles dans `src/models/`
+- Routes dans `src/routers/`, logique auth dans `PermissionEngine`
+- Tests pytest pour endpoints critiques (auth, permissions)
+- Migrations Alembic obligatoires pour tout changement de schéma

@@ -1,0 +1,12 @@
+---
+description: Règles autorisation et habilitations
+globs: "**/permissions/**"
+alwaysApply: false
+---
+
+# RBAC & Habilitations
+
+- Toujours passer par `PermissionEngine` — jamais de check ad-hoc dans les routes
+- Grants : `ProjectPermissionGrant` avec `grantee_type` user | group
+- Chef de projet (owner) et admin peuvent gérer les grants
+- Journaliser grant.create et grant.revoke via `log_audit`

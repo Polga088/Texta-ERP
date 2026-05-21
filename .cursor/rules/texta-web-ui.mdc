@@ -1,0 +1,13 @@
+---
+description: Conventions Next.js et UI
+globs: apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend Web
+
+- Next.js App Router, composants client `"use client"` si état/hooks
+- Tailwind CSS uniquement (pas de CSS modules sauf globals.css)
+- Composants UI dans `src/components/ui/`
+- Appels API via `src/lib/api.ts` avec token JWT
+- Labels utilisateur en français

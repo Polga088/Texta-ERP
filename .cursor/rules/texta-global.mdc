@@ -1,0 +1,13 @@
+---
+description: Standards globaux Texta CRM+ERP
+alwaysApply: true
+---
+
+# Texta CRM+ERP — Règles globales
+
+- Mono-organisation V1 ; `organization_id` sur toutes les tables métier
+- UI en français, code en anglais
+- Ne pas committer sans demande explicite
+- Lire `docs/architecture.md` et `docs/rbac.md` avant une feature
+- Secrets uniquement via `.env` (jamais dans le repo)
+- Validation Pydantic côté API, pas de données non validées
