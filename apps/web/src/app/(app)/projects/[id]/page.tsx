@@ -57,11 +57,32 @@ export default function ProjectDetailPage() {
             <span className="font-medium text-slate-800">Code projet:</span> {project.project_code || "N/A"}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Standard:</span>{" "}
-            {project.quality_standard || "N/A"}
+            <span className="font-medium text-slate-800">Scope:</span> {project.scope_statement || "N/A"}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Scope:</span> {project.scope_statement || "N/A"}
+            <span className="font-medium text-slate-800">Contrôle documentaire:</span>{" "}
+            {project.iso_document_control ? "Actif" : "Inactif"}
+          </p>
+          <p>
+            <span className="font-medium text-slate-800">Contrôle changements:</span>{" "}
+            {project.iso_change_control ? "Actif" : "Inactif"}
+          </p>
+          <p className="md:col-span-2">
+            <span className="font-medium text-slate-800">Contexte ISO:</span> {project.iso_context || "N/A"}
+          </p>
+          <p className="md:col-span-2">
+            <span className="font-medium text-slate-800">Registre des risques:</span>{" "}
+            {project.iso_risk_register || "N/A"}
+          </p>
+          <p className="md:col-span-2">
+            <span className="font-medium text-slate-800">Objectifs:</span> {project.iso_objectives || "N/A"}
+          </p>
+          <p className="md:col-span-2">
+            <span className="font-medium text-slate-800">KPI:</span> {project.iso_kpis || "N/A"}
+          </p>
+          <p className="md:col-span-2">
+            <span className="font-medium text-slate-800">Critères d’acceptation:</span>{" "}
+            {project.iso_acceptance_criteria || "N/A"}
           </p>
         </div>
       </header>

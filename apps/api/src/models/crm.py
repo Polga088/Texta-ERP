@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -84,6 +84,13 @@ class Project(Base, TimestampMixin):
     project_code: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
     quality_standard: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     scope_statement: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    iso_context: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    iso_risk_register: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    iso_objectives: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    iso_kpis: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    iso_acceptance_criteria: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    iso_document_control: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    iso_change_control: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     account: Mapped["Account | None"] = relationship(back_populates="projects")
 

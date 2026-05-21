@@ -17,8 +17,14 @@ export default function NewProjectPage() {
     company_name: "",
     company_logo_url: "",
     project_code: "",
-    quality_standard: "ISO 9001",
     scope_statement: "",
+    iso_context: "",
+    iso_risk_register: "",
+    iso_objectives: "",
+    iso_kpis: "",
+    iso_acceptance_criteria: "",
+    iso_document_control: true,
+    iso_change_control: true,
   });
 
   const submit = async (e: React.FormEvent) => {
@@ -43,12 +49,12 @@ export default function NewProjectPage() {
       <div>
         <h1 className="text-3xl font-bold">Création de projet</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Définissez les informations société, identité visuelle et standard qualité.
+          Définissez les informations société et le profil conformité ISO (processus complet).
         </p>
       </div>
 
       <Card>
-        <CardTitle className="mb-4">Normes projet</CardTitle>
+        <CardTitle className="mb-4">Profil conformité projet (ISO)</CardTitle>
         <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium">Nom du projet</label>
@@ -81,14 +87,6 @@ export default function NewProjectPage() {
               placeholder="https://..."
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Standard qualité</label>
-            <Input
-              value={form.quality_standard}
-              onChange={(e) => setForm((s) => ({ ...s, quality_standard: e.target.value }))}
-              placeholder="ISO 9001 / ISO 27001"
-            />
-          </div>
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium">Description</label>
             <textarea
@@ -98,12 +96,77 @@ export default function NewProjectPage() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Périmètre / Scope Statement</label>
+            <label className="mb-1 block text-sm font-medium">Périmètre (Scope Statement)</label>
             <textarea
               className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
               value={form.scope_statement}
               onChange={(e) => setForm((s) => ({ ...s, scope_statement: e.target.value }))}
+              required
             />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Contexte ISO (parties intéressées, exigences)</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+              value={form.iso_context}
+              onChange={(e) => setForm((s) => ({ ...s, iso_context: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Registre des risques</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+              value={form.iso_risk_register}
+              onChange={(e) => setForm((s) => ({ ...s, iso_risk_register: e.target.value }))}
+              placeholder="Risque, probabilité, impact, plan de mitigation..."
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Objectifs qualité / sécurité</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+              value={form.iso_objectives}
+              onChange={(e) => setForm((s) => ({ ...s, iso_objectives: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">KPI et méthodes de mesure</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+              value={form.iso_kpis}
+              onChange={(e) => setForm((s) => ({ ...s, iso_kpis: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Critères d’acceptation / conformité</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+              value={form.iso_acceptance_criteria}
+              onChange={(e) => setForm((s) => ({ ...s, iso_acceptance_criteria: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="md:col-span-2 grid gap-2 sm:grid-cols-2">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+              <input
+                type="checkbox"
+                checked={form.iso_document_control}
+                onChange={(e) => setForm((s) => ({ ...s, iso_document_control: e.target.checked }))}
+              />
+              Contrôle documentaire actif
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+              <input
+                type="checkbox"
+                checked={form.iso_change_control}
+                onChange={(e) => setForm((s) => ({ ...s, iso_change_control: e.target.checked }))}
+              />
+              Contrôle des changements actif
+            </label>
           </div>
 
           {error && <p className="md:col-span-2 text-sm text-rose-600">{error}</p>}

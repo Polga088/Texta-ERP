@@ -16,8 +16,14 @@ export interface Project {
   company_name?: string;
   company_logo_url?: string;
   project_code?: string;
-  quality_standard?: string;
   scope_statement?: string;
+  iso_context?: string;
+  iso_risk_register?: string;
+  iso_objectives?: string;
+  iso_kpis?: string;
+  iso_acceptance_criteria?: string;
+  iso_document_control?: boolean;
+  iso_change_control?: boolean;
 }
 
 export interface Task {

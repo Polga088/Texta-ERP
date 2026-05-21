@@ -56,8 +56,14 @@ class ProjectCreate(BaseModel):
     company_name: str | None = None
     company_logo_url: str | None = None
     project_code: str | None = None
-    quality_standard: str | None = None
-    scope_statement: str | None = None
+    scope_statement: str = Field(min_length=20)
+    iso_context: str = Field(min_length=20)
+    iso_risk_register: str = Field(min_length=20)
+    iso_objectives: str = Field(min_length=20)
+    iso_kpis: str = Field(min_length=20)
+    iso_acceptance_criteria: str = Field(min_length=20)
+    iso_document_control: bool = True
+    iso_change_control: bool = True
 
 
 class ProjectUpdate(BaseModel):
@@ -72,8 +78,14 @@ class ProjectUpdate(BaseModel):
     company_name: str | None = None
     company_logo_url: str | None = None
     project_code: str | None = None
-    quality_standard: str | None = None
     scope_statement: str | None = None
+    iso_context: str | None = None
+    iso_risk_register: str | None = None
+    iso_objectives: str | None = None
+    iso_kpis: str | None = None
+    iso_acceptance_criteria: str | None = None
+    iso_document_control: bool | None = None
+    iso_change_control: bool | None = None
 
 
 class ProjectResponse(TimestampSchema):
@@ -90,8 +102,14 @@ class ProjectResponse(TimestampSchema):
     company_name: str | None
     company_logo_url: str | None
     project_code: str | None
-    quality_standard: str | None
     scope_statement: str | None
+    iso_context: str | None
+    iso_risk_register: str | None
+    iso_objectives: str | None
+    iso_kpis: str | None
+    iso_acceptance_criteria: str | None
+    iso_document_control: bool
+    iso_change_control: bool
 
 
 class LeadCreate(BaseModel):
