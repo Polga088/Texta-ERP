@@ -29,7 +29,7 @@ export default function RegisterPage() {
         body: JSON.stringify(form),
       });
       setTokens(data.access_token, data.refresh_token);
-      router.push("/dashboard");
+      router.push("/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur");
     } finally {
