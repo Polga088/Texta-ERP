@@ -56,7 +56,8 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${PUBLIC_APP_URL:?Set PUBLIC_APP_URL in .env}
+        # Vide = appels API relatifs via Nginx (/api/v1) — recommandé en production
+        NEXT_PUBLIC_API_URL: ""
     restart: unless-stopped
     environment:
       NODE_ENV: production
