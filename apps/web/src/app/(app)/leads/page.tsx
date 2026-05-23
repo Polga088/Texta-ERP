@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Trophy } from "lucide-react";
 import { api } from "@/lib/api";
 import { Lead } from "@/types";
@@ -61,11 +61,48 @@ export default function LeadsPage() {
     }
   };
 
+  const grouped = useMemo(() => {
+    return {
+      new: leads.filter((lead) => lead.status === "new"),
+      qualified: leads.filter((lead) => lead.status === "qualified"),
+      proposal: leads.filter((lead) => lead.status === "proposal"),
+      won: leads.filter((lead) => lead.status === "won"),
+      lost: leads.filter((lead) => lead.status === "lost"),
+    };
+  }, [leads]);
+
+  const conversionRate = useMemo(() => {
+    const active = leads.filter((lead) => lead.status !== "lost").length;
+    if (active === 0) return 0;
+    return Math.round((grouped.won.length / active) * 100);
+  }, [grouped.won.length, leads]);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Leads</h1>
         <p className="mt-1 text-sm text-slate-500">Portail de gestion commerciale des opportunités.</p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Nouveaux</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{grouped.new.length}</p>
+        </Card>
+        <Card>
+          <p className="text-xs uppercase tracking-wide text-slate-500">En pipeline</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {grouped.qualified.length + grouped.proposal.length}
+          </p>
+        </Card>
+        <Card>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Gagnés</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-700">{grouped.won.length}</p>
+        </Card>
+        <Card>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Taux conversion</p>
+          <p className="mt-1 text-2xl font-bold text-indigo-700">{conversionRate}%</p>
+        </Card>
       </div>
 
       <Card>
@@ -94,39 +131,46 @@ export default function LeadsPage() {
         </div>
       </Card>
 
-      <Card className="p-0">
-        <ul className="divide-y divide-slate-100">
-          {leads.map((lead) => (
-            <li key={lead.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div>
-                <p className="font-medium text-slate-800">{lead.title}</p>
-                <p className="text-xs text-slate-500">
-                  Source: {lead.source || "N/A"}
-                  {lead.estimated_value ? ` · Valeur: ${lead.estimated_value}` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge status={lead.status} label={STATUS_LABELS[lead.status]} />
-                {lead.status !== "won" && lead.status !== "lost" && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => moveLead(lead, WORKFLOW[WORKFLOW.indexOf(lead.status) + 1])}
-                  >
-                    Étape suivante
-                  </Button>
-                )}
-                {lead.status !== "lost" && (
-                  <Button size="sm" variant="ghost" onClick={() => moveLead(lead, "lost")}>
-                    Marquer perdu
-                  </Button>
-                )}
-              </div>
-            </li>
-          ))}
-          {leads.length === 0 && <li className="px-4 py-5 text-sm text-slate-500">Aucun lead pour le moment.</li>}
-        </ul>
-      </Card>
+      <div className="grid gap-4 xl:grid-cols-5">
+        {(Object.keys(grouped) as Array<keyof typeof grouped>).map((status) => (
+          <Card key={status} className="min-h-[260px] border border-slate-200 p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <Badge status={status} label={STATUS_LABELS[status]} />
+              <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                {grouped[status].length}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {grouped[status].map((lead) => (
+                <article key={lead.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <p className="text-sm font-semibold text-slate-800">{lead.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {lead.source || "Source non renseignée"}
+                    {lead.estimated_value ? ` · ${lead.estimated_value} €` : ""}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {lead.status !== "won" && lead.status !== "lost" && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => moveLead(lead, WORKFLOW[WORKFLOW.indexOf(lead.status) + 1])}
+                      >
+                        Étape suivante
+                      </Button>
+                    )}
+                    {lead.status !== "lost" && lead.status !== "won" && (
+                      <Button size="sm" variant="ghost" onClick={() => moveLead(lead, "lost")}>
+                        Perdu
+                      </Button>
+                    )}
+                  </div>
+                </article>
+              ))}
+              {grouped[status].length === 0 && <p className="text-xs text-slate-400">Aucun lead</p>}
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

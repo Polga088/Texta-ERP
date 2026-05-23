@@ -88,6 +88,10 @@ class ProjectUpdate(BaseModel):
     iso_change_control: bool | None = None
 
 
+class ProjectDeleteRequest(BaseModel):
+    reason: str = Field(min_length=10, max_length=1000)
+
+
 class ProjectResponse(TimestampSchema):
     id: UUID
     name: str

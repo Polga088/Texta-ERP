@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { ShieldCheck, UserCog, Users } from "lucide-react";
-import { api } from "@/lib/api";
+import { useParams, useRouter } from "next/navigation";
+import { ShieldCheck, Trash2, UserCog, Users } from "lucide-react";
+import { ApiError, api } from "@/lib/api";
 import { Grant, Project } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 
 const STATUS_FR: Record<string, string> = {
@@ -18,9 +19,13 @@ const STATUS_FR: Record<string, string> = {
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [perms, setPerms] = useState<string[]>([]);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -37,15 +42,59 @@ export default function ProjectDetailPage() {
     return { users, groups };
   }, [grants]);
 
+  const deleteProject = async () => {
+    if (!id || deleteReason.trim().length < 10) {
+      setDeleteError("Merci de renseigner une explication (10 caractères minimum).");
+      return;
+    }
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await api(`/projects/${id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ reason: deleteReason.trim() }),
+      });
+      router.push("/projects");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setDeleteError("Action réservée à l'admin ou au chef de projet.");
+      } else {
+        setDeleteError(err instanceof Error ? err.message : "Impossible de supprimer ce projet.");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!project) return <p className="text-slate-500">Chargement du projet...</p>;
 
   return (
     <div className="space-y-6">
       <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{project.name}</h1>
-          <Badge status={project.status} label={STATUS_FR[project.status] || project.status} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{project.name}</h1>
+            <Badge status={project.status} label={STATUS_FR[project.status] || project.status} />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="Explication de suppression (obligatoire)"
+              className="w-72 rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm"
+            />
+            <Button
+              onClick={deleteProject}
+              disabled={deleting}
+              variant="ghost"
+              className="border border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+            >
+              <Trash2 size={16} />
+              {deleting ? "Suppression..." : "Supprimer"}
+            </Button>
+          </div>
         </div>
+        {deleteError && <p className="mt-3 text-sm text-rose-600">{deleteError}</p>}
         <p className="mt-3 max-w-3xl text-sm text-slate-600">
           {project.description || "Aucune description pour ce projet."}
         </p>

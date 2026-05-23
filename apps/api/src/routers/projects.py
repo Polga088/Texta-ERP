@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_db
 from src.core.deps import get_current_user, get_permission_engine
 from src.models.crm import Project
-from src.models.organization import User
+from src.models.organization import GlobalRole, User
 from src.modules.permissions.engine import PermissionEngine
-from src.schemas.crm import ProjectCreate, ProjectResponse, ProjectUpdate
+from src.schemas.crm import ProjectCreate, ProjectDeleteRequest, ProjectResponse, ProjectUpdate
+from src.services.audit import log_audit
 
 router = APIRouter()
 
@@ -80,3 +81,30 @@ async def update_project(
         setattr(project, field, value)
     await db.flush()
     return project
+
+
+@router.delete("/{project_id}")
+async def delete_project(
+    project_id: UUID,
+    data: ProjectDeleteRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    project = await db.get(Project, project_id)
+    if not project or project.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Projet introuvable")
+
+    if user.global_role not in {GlobalRole.ADMIN, GlobalRole.PROJECT_MANAGER}:
+        raise HTTPException(status_code=403, detail="Suppression réservée à l'admin ou au chef de projet")
+
+    await log_audit(
+        db,
+        organization_id=user.organization_id,
+        actor_id=user.id,
+        action="project.delete",
+        resource_type="project",
+        resource_id=str(project.id),
+        details={"reason": data.reason, "project_name": project.name},
+    )
+    await db.delete(project)
+    return {"message": "Projet supprimé"}
