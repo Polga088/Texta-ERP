@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutList, LayoutPanelLeft, Plus, Trash2 } from "lucide-react";
+import { LayoutList, LayoutPanelLeft, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { Project, Task } from "@/types";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
@@ -25,6 +25,15 @@ export default function TasksPage() {
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [error, setError] = useState("");
   const [loadingCreate, setLoadingCreate] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskForm, setEditTaskForm] = useState({
+    title: "",
+    description: "",
+    status: "todo",
+    priority: "medium",
+    due_date: "",
+    project_id: "",
+  });
 
   const load = useCallback(() => {
     api<Task[]>("/tasks")
@@ -91,6 +100,52 @@ export default function TasksPage() {
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de suppression");
+    }
+  };
+
+  const beginEditTask = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditTaskForm({
+      title: task.title,
+      description: task.description || "",
+      status: task.status,
+      priority: task.priority,
+      due_date: task.due_date || "",
+      project_id: task.project_id || "",
+    });
+  };
+
+  const cancelEditTask = () => {
+    setEditingTaskId(null);
+    setEditTaskForm({
+      title: "",
+      description: "",
+      status: "todo",
+      priority: "medium",
+      due_date: "",
+      project_id: "",
+    });
+  };
+
+  const saveTask = async () => {
+    if (!editingTaskId) return;
+    try {
+      await api(`/tasks/${editingTaskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: editTaskForm.title,
+          description: editTaskForm.description || null,
+          status: editTaskForm.status,
+          priority: editTaskForm.priority,
+          due_date: editTaskForm.due_date || null,
+          project_id: editTaskForm.project_id || null,
+        }),
+      });
+      setError("");
+      cancelEditTask();
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de mise à jour");
     }
   };
 
@@ -169,33 +224,105 @@ export default function TasksPage() {
           <ul className="divide-y divide-slate-100">
             {tasks.map((task) => (
               <li key={task.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                <div>
-                  <p className="font-medium text-slate-800">{task.title}</p>
-                  <p className="text-xs text-slate-500">
-                    Priorité: {task.priority}
-                    {task.due_date ? ` · Échéance: ${task.due_date}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge status={task.status} label={STATUS_LABELS[task.status]} />
-                  <select
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
-                    value={task.status}
-                    onChange={(e) => updateStatus(task.id, e.target.value as Task["status"])}
-                  >
-                    <option value="todo">À faire</option>
-                    <option value="in_progress">En cours</option>
-                    <option value="in_review">En revue</option>
-                    <option value="done">Terminé</option>
-                  </select>
-                  <button
-                    onClick={() => deleteTask(task.id)}
-                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                    aria-label="Supprimer la tâche"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
+                {editingTaskId === task.id ? (
+                  <div className="grid w-full gap-2 md:grid-cols-6">
+                    <input
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm md:col-span-2"
+                      value={editTaskForm.title}
+                      onChange={(e) => setEditTaskForm((s) => ({ ...s, title: e.target.value }))}
+                    />
+                    <select
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                      value={editTaskForm.status}
+                      onChange={(e) => setEditTaskForm((s) => ({ ...s, status: e.target.value }))}
+                    >
+                      <option value="todo">À faire</option>
+                      <option value="in_progress">En cours</option>
+                      <option value="in_review">En revue</option>
+                      <option value="done">Terminé</option>
+                    </select>
+                    <select
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                      value={editTaskForm.priority}
+                      onChange={(e) => setEditTaskForm((s) => ({ ...s, priority: e.target.value }))}
+                    >
+                      <option value="low">Basse</option>
+                      <option value="medium">Moyenne</option>
+                      <option value="high">Haute</option>
+                      <option value="urgent">Urgente</option>
+                    </select>
+                    <input
+                      type="date"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                      value={editTaskForm.due_date}
+                      onChange={(e) => setEditTaskForm((s) => ({ ...s, due_date: e.target.value }))}
+                    />
+                    <select
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                      value={editTaskForm.project_id}
+                      onChange={(e) => setEditTaskForm((s) => ({ ...s, project_id: e.target.value }))}
+                    >
+                      <option value="">Sans projet</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                    <textarea
+                      className="min-h-16 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm md:col-span-4"
+                      value={editTaskForm.description}
+                      onChange={(e) => setEditTaskForm((s) => ({ ...s, description: e.target.value }))}
+                      placeholder="Description"
+                    />
+                    <div className="flex items-center gap-2 md:col-span-2 md:justify-end">
+                      <Button size="sm" onClick={saveTask}>
+                        Enregistrer
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEditTask}>
+                        <X size={14} />
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="font-medium text-slate-800">{task.title}</p>
+                      <p className="text-xs text-slate-500">
+                        Priorité: {task.priority}
+                        {task.due_date ? ` · Échéance: ${task.due_date}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge status={task.status} label={STATUS_LABELS[task.status]} />
+                      <select
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                        value={task.status}
+                        onChange={(e) => updateStatus(task.id, e.target.value as Task["status"])}
+                      >
+                        <option value="todo">À faire</option>
+                        <option value="in_progress">En cours</option>
+                        <option value="in_review">En revue</option>
+                        <option value="done">Terminé</option>
+                      </select>
+                      <button
+                        onClick={() => beginEditTask(task)}
+                        className="rounded-lg p-1.5 text-slate-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                        aria-label="Éditer la tâche"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => deleteTask(task.id)}
+                        className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                        aria-label="Supprimer la tâche"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

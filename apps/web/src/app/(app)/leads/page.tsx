@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Trophy } from "lucide-react";
+import { ArrowRight, Pencil, Trophy, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Lead } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,14 @@ export default function LeadsPage() {
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
   const [error, setError] = useState("");
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    source: "",
+    status: "new" as Lead["status"],
+    estimated_value: "",
+    notes: "",
+  });
 
   const load = () => api<Lead[]>("/leads").then(setLeads).catch(console.error);
 
@@ -55,6 +63,43 @@ export default function LeadsPage() {
         body: JSON.stringify({ status }),
       });
       setError("");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de mise à jour");
+    }
+  };
+
+  const beginEdit = (lead: Lead) => {
+    setEditingLeadId(lead.id);
+    setEditForm({
+      title: lead.title,
+      source: lead.source || "",
+      status: lead.status,
+      estimated_value: lead.estimated_value ? String(lead.estimated_value) : "",
+      notes: lead.notes || "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingLeadId(null);
+    setEditForm({ title: "", source: "", status: "new", estimated_value: "", notes: "" });
+  };
+
+  const saveLead = async () => {
+    if (!editingLeadId) return;
+    try {
+      await api(`/leads/${editingLeadId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: editForm.title,
+          source: editForm.source || null,
+          status: editForm.status,
+          estimated_value: editForm.estimated_value ? Number(editForm.estimated_value) : null,
+          notes: editForm.notes || null,
+        }),
+      });
+      setError("");
+      cancelEdit();
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de mise à jour");
@@ -143,27 +188,82 @@ export default function LeadsPage() {
             <div className="space-y-2">
               {grouped[status].map((lead) => (
                 <article key={lead.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                  <p className="text-sm font-semibold text-slate-800">{lead.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {lead.source || "Source non renseignée"}
-                    {lead.estimated_value ? ` · ${lead.estimated_value} €` : ""}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {lead.status !== "won" && lead.status !== "lost" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => moveLead(lead, WORKFLOW[WORKFLOW.indexOf(lead.status) + 1])}
-                      >
-                        Étape suivante
-                      </Button>
-                    )}
-                    {lead.status !== "lost" && lead.status !== "won" && (
-                      <Button size="sm" variant="ghost" onClick={() => moveLead(lead, "lost")}>
-                        Perdu
-                      </Button>
-                    )}
-                  </div>
+                  {editingLeadId === lead.id ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={editForm.title}
+                        onChange={(e) => setEditForm((s) => ({ ...s, title: e.target.value }))}
+                        placeholder="Nom opportunité"
+                      />
+                      <Input
+                        value={editForm.source}
+                        onChange={(e) => setEditForm((s) => ({ ...s, source: e.target.value }))}
+                        placeholder="Source"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={editForm.status}
+                          onChange={(e) => setEditForm((s) => ({ ...s, status: e.target.value as Lead["status"] }))}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                        >
+                          {Object.keys(STATUS_LABELS).map((option) => (
+                            <option key={option} value={option}>
+                              {STATUS_LABELS[option as Lead["status"]]}
+                            </option>
+                          ))}
+                        </select>
+                        <Input
+                          type="number"
+                          value={editForm.estimated_value}
+                          onChange={(e) => setEditForm((s) => ({ ...s, estimated_value: e.target.value }))}
+                          placeholder="Valeur €"
+                        />
+                      </div>
+                      <textarea
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))}
+                        placeholder="Notes"
+                        className="min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveLead}>
+                          Enregistrer
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                          <X size={14} />
+                          Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-slate-800">{lead.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {lead.source || "Source non renseignée"}
+                        {lead.estimated_value ? ` · ${lead.estimated_value} €` : ""}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {lead.status !== "won" && lead.status !== "lost" && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => moveLead(lead, WORKFLOW[WORKFLOW.indexOf(lead.status) + 1])}
+                          >
+                            Étape suivante
+                          </Button>
+                        )}
+                        {lead.status !== "lost" && lead.status !== "won" && (
+                          <Button size="sm" variant="ghost" onClick={() => moveLead(lead, "lost")}>
+                            Perdu
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" onClick={() => beginEdit(lead)}>
+                          <Pencil size={14} />
+                          Éditer
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </article>
               ))}
               {grouped[status].length === 0 && <p className="text-xs text-slate-400">Aucun lead</p>}
