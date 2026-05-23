@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, parseISO, startOfWeek, addDays, isSameDay } from "date-fns";
+import { addDays, format, isSameDay, isToday, parseISO, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { api } from "@/lib/api";
 import { CalendarEvent } from "@/types";
@@ -17,23 +17,32 @@ export default function CalendarPage() {
   }, []);
 
   return (
-    <div>
-      <h1 className="mb-8 text-3xl font-bold">Agenda & Réunions</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Agenda & Réunions</h1>
+        <p className="mt-1 text-sm text-slate-500">Vue semaine modernisée avec focus sur les événements prioritaires.</p>
+      </div>
 
-      <div className="mb-8 grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-7">
         {days.map((day) => {
           const dayEvents = events.filter((e) => isSameDay(parseISO(e.start_at), day));
           return (
-            <Card key={day.toISOString()} className="min-h-[120px] p-3">
-              <p className="text-xs font-semibold text-slate-500">
-                {format(day, "EEE d", { locale: fr })}
+            <Card
+              key={day.toISOString()}
+              className={`min-h-[150px] border ${isToday(day) ? "border-indigo-300 bg-indigo-50/40" : "border-slate-200"} p-3`}
+            >
+              <p className={`text-xs font-semibold ${isToday(day) ? "text-indigo-700" : "text-slate-500"}`}>
+                {format(day, "EEEE d", { locale: fr })}
               </p>
               {dayEvents.map((e) => (
-                <div key={e.id} className="mt-2 rounded bg-indigo-50 p-2 text-xs dark:bg-indigo-950">
+                <div key={e.id} className="mt-2 rounded-xl border border-indigo-100 bg-white p-2 text-xs shadow-sm">
                   <p className="font-medium">{e.title}</p>
-                  <p className="text-slate-500">{format(parseISO(e.start_at), "HH:mm")}</p>
+                  <p className="text-slate-500">
+                    {format(parseISO(e.start_at), "HH:mm")} - {format(parseISO(e.end_at), "HH:mm")}
+                  </p>
                 </div>
               ))}
+              {dayEvents.length === 0 && <p className="mt-3 text-xs text-slate-400">Aucun événement.</p>}
             </Card>
           );
         })}
@@ -43,7 +52,7 @@ export default function CalendarPage() {
         <CardTitle>Prochains événements</CardTitle>
         <ul className="mt-4 space-y-3">
           {events.map((e) => (
-            <li key={e.id} className="flex justify-between border-b pb-3 text-sm">
+            <li key={e.id} className="flex flex-wrap justify-between gap-3 border-b pb-3 text-sm">
               <div>
                 <p className="font-medium">{e.title}</p>
                 <p className="text-slate-500">
@@ -55,9 +64,12 @@ export default function CalendarPage() {
                   )}
                 </p>
               </div>
-              <span className="text-slate-400">{e.attendees?.length || 0} participants</span>
+              <span className="rounded-lg bg-slate-100 px-2 py-1 text-slate-500">
+                {e.attendees?.length || 0} participants
+              </span>
             </li>
           ))}
+          {events.length === 0 && <li className="text-sm text-slate-500">Aucun événement planifié.</li>}
         </ul>
       </Card>
     </div>

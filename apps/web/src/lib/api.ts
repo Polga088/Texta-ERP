@@ -28,9 +28,43 @@ export class ApiError extends Error {
   }
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("access_token");
+}
+
+function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("refresh_token");
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
+
+    const response = await fetch(buildUrl("/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!response.ok) return false;
+
+    const data = (await response.json()) as { access_token: string; refresh_token: string };
+    setTokens(data.access_token, data.refresh_token);
+    return true;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 }
 
 function parseErrorDetail(body: unknown, fallback: string): string {
@@ -49,16 +83,26 @@ export async function api<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = getToken();
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
+  const request = async (): Promise<Response> => {
+    const token = getToken();
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    };
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
+    return fetch(buildUrl(path), { ...options, headers });
   };
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+
+  let res = await request();
+  if (res.status === 401 && getRefreshToken()) {
+    const refreshed = await refreshAccessToken().catch(() => false);
+    if (refreshed) {
+      res = await request();
+    }
   }
 
-  const res = await fetch(buildUrl(path), { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const message = parseErrorDetail(err, res.statusText);

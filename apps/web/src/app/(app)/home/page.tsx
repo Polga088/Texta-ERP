@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  Bell,
   Calendar,
   CheckSquare,
   Clock3,
@@ -22,7 +21,6 @@ const apps = [
   { href: "/tasks", label: "Tâches", icon: CheckSquare, color: "text-violet-600", bg: "bg-violet-100" },
   { href: "/time", label: "Temps projet", icon: Clock3, color: "text-amber-600", bg: "bg-amber-100" },
   { href: "/chat", label: "Chat", icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-100" },
-  { href: "/notifications", label: "Notifications", icon: Bell, color: "text-rose-600", bg: "bg-rose-100" },
   { href: "/hr", label: "Ressources Humaines", icon: Users, color: "text-sky-600", bg: "bg-sky-100" },
   { href: "/permissions", label: "Habilitations", icon: Shield, color: "text-purple-600", bg: "bg-purple-100" },
   { href: "/calendar", label: "Agenda", icon: Calendar, color: "text-teal-600", bg: "bg-teal-100" },

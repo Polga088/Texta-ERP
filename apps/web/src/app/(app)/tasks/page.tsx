@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutList, LayoutPanelLeft } from "lucide-react";
-import { api } from "@/lib/api";
-import { Task } from "@/types";
+import { LayoutList, LayoutPanelLeft, Plus, Trash2 } from "lucide-react";
+import { ApiError, api } from "@/lib/api";
+import { Project, Task } from "@/types";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,21 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [view, setView] = useState<"kanban" | "list">("list");
+  const [title, setTitle] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [priority, setPriority] = useState<Task["priority"]>("medium");
+  const [error, setError] = useState("");
+  const [loadingCreate, setLoadingCreate] = useState(false);
 
   const load = useCallback(() => {
-    api<Task[]>("/tasks").then(setTasks).catch(console.error);
+    api<Task[]>("/tasks")
+      .then(setTasks)
+      .catch((err) => setError(err instanceof Error ? err.message : "Impossible de charger les tâches"));
+    api<Project[]>("/projects")
+      .then(setProjects)
+      .catch(() => setProjects([]));
   }, []);
 
   useEffect(() => {
@@ -32,6 +43,56 @@ export default function TasksPage() {
     if (tasks.length === 0) return 0;
     return Math.round((tasks.filter((t) => t.status === "done").length / tasks.length) * 100);
   }, [tasks]);
+
+  const createTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setLoadingCreate(true);
+    setError("");
+    try {
+      await api("/tasks", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          priority,
+          project_id: projectId || null,
+        }),
+      });
+      setTitle("");
+      setProjectId("");
+      setPriority("medium");
+      load();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setError("Permission insuffisante pour créer une tâche sur ce projet.");
+      } else {
+        setError(err instanceof Error ? err.message : "Erreur de création");
+      }
+    } finally {
+      setLoadingCreate(false);
+    }
+  };
+
+  const updateStatus = async (taskId: string, status: Task["status"]) => {
+    try {
+      await api(`/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de mise à jour");
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await api(`/tasks/${taskId}`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de suppression");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -62,6 +123,45 @@ export default function TasksPage() {
         </div>
       </div>
 
+      <Card>
+        <form onSubmit={createTask} className="grid gap-3 md:grid-cols-4">
+          <input
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            placeholder="Nouvelle tâche..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+          <select
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+          >
+            <option value="">Sans projet</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Task["priority"])}
+          >
+            <option value="low">Priorité basse</option>
+            <option value="medium">Priorité moyenne</option>
+            <option value="high">Priorité haute</option>
+            <option value="urgent">Priorité urgente</option>
+          </select>
+          <Button type="submit" disabled={loadingCreate}>
+            <Plus size={16} />
+            {loadingCreate ? "Création..." : "Créer"}
+          </Button>
+        </form>
+        {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+      </Card>
+
       {view === "kanban" ? (
         <KanbanBoard tasks={tasks} onUpdate={load} />
       ) : (
@@ -76,7 +176,26 @@ export default function TasksPage() {
                     {task.due_date ? ` · Échéance: ${task.due_date}` : ""}
                   </p>
                 </div>
-                <Badge status={task.status} label={STATUS_LABELS[task.status]} />
+                <div className="flex items-center gap-2">
+                  <Badge status={task.status} label={STATUS_LABELS[task.status]} />
+                  <select
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                    value={task.status}
+                    onChange={(e) => updateStatus(task.id, e.target.value as Task["status"])}
+                  >
+                    <option value="todo">À faire</option>
+                    <option value="in_progress">En cours</option>
+                    <option value="in_review">En revue</option>
+                    <option value="done">Terminé</option>
+                  </select>
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                    aria-label="Supprimer la tâche"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

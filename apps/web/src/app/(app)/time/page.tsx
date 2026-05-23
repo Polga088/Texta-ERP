@@ -6,11 +6,23 @@ import { Project, TimeEntry } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 
+const SESSION_STARTED_AT_KEY = "session_started_at";
+const INACTIVITY_TIMEOUT_MINUTES_KEY = "inactivity_timeout_minutes";
+
+function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export default function TimeTrackingPage() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
   const [note, setNote] = useState("");
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [inactivityTimeoutMinutes, setInactivityTimeoutMinutes] = useState(30);
 
   const load = () => {
     api<TimeEntry[]>("/time-entries").then(setEntries).catch(console.error);
@@ -19,6 +31,24 @@ export default function TimeTrackingPage() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    const now = Date.now();
+    const startedAtStored = Number(localStorage.getItem(SESSION_STARTED_AT_KEY) || now);
+    const startedAt = Number.isFinite(startedAtStored) ? startedAtStored : now;
+    localStorage.setItem(SESSION_STARTED_AT_KEY, String(startedAt));
+
+    const timeoutStored = Number(localStorage.getItem(INACTIVITY_TIMEOUT_MINUTES_KEY) || "30");
+    if (Number.isFinite(timeoutStored) && timeoutStored > 0) {
+      setInactivityTimeoutMinutes(timeoutStored);
+    }
+
+    const timer = window.setInterval(() => {
+      setSessionSeconds(Math.max(Math.floor((Date.now() - startedAt) / 1000), 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   const totalHours = useMemo(
@@ -40,6 +70,12 @@ export default function TimeTrackingPage() {
     load();
   };
 
+  const saveTimeout = () => {
+    const normalized = Math.min(Math.max(inactivityTimeoutMinutes, 5), 240);
+    setInactivityTimeoutMinutes(normalized);
+    localStorage.setItem(INACTIVITY_TIMEOUT_MINUTES_KEY, String(normalized));
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,6 +84,31 @@ export default function TimeTrackingPage() {
           Temps total suivi: <span className="font-semibold text-slate-800">{totalHours} h</span>
         </p>
       </div>
+
+      <Card>
+        <CardTitle className="mb-3">Session automatique</CardTitle>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2.5 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Compteur session</p>
+            <p className="mt-1 text-lg font-bold text-indigo-900">{formatDuration(sessionSeconds)}</p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Kill session inactif (minutes)</label>
+            <input
+              type="number"
+              min={5}
+              max={240}
+              value={inactivityTimeoutMinutes}
+              onChange={(e) => setInactivityTimeoutMinutes(Number(e.target.value))}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            />
+          </div>
+          <Button onClick={saveTimeout}>Enregistrer le délai</Button>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Le compteur démarre automatiquement dès la connexion. La session est coupée après inactivité.
+        </p>
+      </Card>
 
       <Card>
         <CardTitle className="mb-3">Démarrer un suivi de temps</CardTitle>
