@@ -420,6 +420,40 @@ export interface TimeEntry {
   source: string;
 }
 
+export interface BillingItem {
+  product_id?: string;
+  description: string;
+  qty: number;
+  unit_price: number;
+  discount_percent?: number;
+  total_ht: number;
+}
+
+export interface ProductCatalogItem {
+  id: string;
+  sku: string;
+  name: string;
+  category?: string;
+  description?: string;
+  unit_price: number;
+  tva_rate: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BillingAttachment {
+  id: string;
+  quote_id?: string;
+  invoice_id?: string;
+  original_filename: string;
+  content_type?: string;
+  size_bytes: number;
+  uploaded_by_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Quote {
   id: string;
   quote_number: string;
@@ -427,14 +461,7 @@ export interface Quote {
   client_id?: string;
   issue_date: string;
   valid_until: string;
-  items: Array<{
-    product_id?: string;
-    description: string;
-    qty: number;
-    unit_price: number;
-    discount_percent?: number;
-    total_ht: number;
-  }>;
+  items: BillingItem[];
   total_ht: number;
   tva_rate: number;
   tva_amount: number;

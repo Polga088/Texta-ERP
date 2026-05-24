@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Date, Enum, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -128,3 +128,45 @@ class Payment(Base, TimestampMixin):
     )
     reference: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+class Product(Base, TimestampMixin):
+    __tablename__ = "products"
+    __table_args__ = (UniqueConstraint("organization_id", "sku", name="uq_products_org_sku"),)
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    sku: Mapped[str] = mapped_column(String(80), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
+    tva_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=20, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+
+class BillingAttachment(Base, TimestampMixin):
+    __tablename__ = "billing_attachments"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    quote_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("quotes.id", ondelete="CASCADE"), nullable=True
+    )
+    invoice_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"), nullable=True
+    )
+    uploaded_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    size_bytes: Mapped[int] = mapped_column(default=0, nullable=False)
+    storage_path: Mapped[str] = mapped_column(String(800), nullable=False)

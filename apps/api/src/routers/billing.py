@@ -1,32 +1,52 @@
 from __future__ import annotations
 
+import io
+import os
+from pathlib import Path
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse, Response
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import get_settings
 from src.core.database import get_db
 from src.core.deps import get_current_user
-from src.models.billing import Invoice, InvoiceStatus, Payment, Quote, QuoteStatus
+from src.models.billing import BillingAttachment, Invoice, InvoiceStatus, Payment, Product, Quote, QuoteStatus
 from src.models.crm import Lead, LeadStatus
 from src.models.organization import User
 from src.schemas.billing import (
+    BillingAttachmentResponse,
     BillingKpis,
     InvoiceCreate,
     InvoiceResponse,
     InvoiceUpdate,
     PaymentCreate,
     PaymentResponse,
+    ProductCreate,
+    ProductResponse,
+    ProductUpdate,
     QuoteCreate,
     QuoteResponse,
     QuoteUpdate,
 )
+from src.services.audit import log_audit
 
 router = APIRouter()
+settings = get_settings()
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".txt", ".docx", ".xlsx"}
+ALLOWED_UPLOAD_MIME_PREFIXES = ("image/", "text/")
+ALLOWED_UPLOAD_MIME_EXACT = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
 
 
 def _build_number(prefix: str, count: int) -> str:
@@ -51,6 +71,217 @@ def _compute_totals(items: list[dict], tva_rate: float) -> tuple[float, float, f
 
 def _to_decimal(value: float) -> Decimal:
     return Decimal(str(round(value, 2)))
+
+
+def _sanitize_filename(filename: str) -> str:
+    safe = Path(filename).name.strip()
+    return safe or "document.bin"
+
+
+def _attachment_dir(entity: str, entity_id: UUID) -> Path:
+    base = Path(settings.billing_files_dir)
+    target = base / entity / str(entity_id)
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
+async def _save_attachment_file(entity: str, entity_id: UUID, file: UploadFile) -> tuple[str, int]:
+    target_dir = _attachment_dir(entity, entity_id)
+    extension = Path(file.filename or "").suffix.lower()
+    content_type = (file.content_type or "").lower()
+    if extension not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Extension de fichier non autorisee")
+    if not (
+        content_type in ALLOWED_UPLOAD_MIME_EXACT
+        or any(content_type.startswith(prefix) for prefix in ALLOWED_UPLOAD_MIME_PREFIXES)
+    ):
+        raise HTTPException(status_code=400, detail="Type de fichier non autorise")
+    storage_name = f"{uuid4().hex}{extension}"
+    output_path = target_dir / storage_name
+
+    total_size = 0
+    max_size = settings.billing_max_upload_mb * 1024 * 1024
+    with output_path.open("wb") as destination:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > max_size:
+                destination.close()
+                output_path.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="Fichier trop volumineux")
+            destination.write(chunk)
+    await file.close()
+    return str(output_path), total_size
+
+
+async def _normalize_items(
+    db: AsyncSession,
+    organization_id: UUID,
+    items: list[dict],
+) -> list[dict]:
+    normalized: list[dict] = []
+    for item in items:
+        current = dict(item)
+        product_id = current.get("product_id")
+        if product_id:
+            product = await db.get(Product, product_id)
+            if not product or product.organization_id != organization_id:
+                raise HTTPException(status_code=404, detail="Produit introuvable")
+            current["product_id"] = str(product.id)
+            if not current.get("description"):
+                current["description"] = product.name
+            if not current.get("unit_price"):
+                current["unit_price"] = float(product.unit_price)
+        normalized.append(current)
+    return normalized
+
+
+def _build_pdf_document(
+    title: str,
+    document_number: str,
+    issue_date: date,
+    due_date: date | None,
+    items: list[dict],
+    total_ht: float,
+    tva_amount: float,
+    total_ttc: float,
+) -> bytes:
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 60
+
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(50, y, title)
+    y -= 28
+    pdf.setFont("Helvetica", 11)
+    pdf.drawString(50, y, f"Numero: {document_number}")
+    y -= 18
+    pdf.drawString(50, y, f"Date emission: {issue_date.isoformat()}")
+    if due_date:
+        y -= 18
+        pdf.drawString(50, y, f"Date echeance: {due_date.isoformat()}")
+
+    y -= 28
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(50, y, "Description")
+    pdf.drawString(330, y, "Qt")
+    pdf.drawString(390, y, "PU HT")
+    pdf.drawString(470, y, "Total HT")
+    y -= 14
+    pdf.line(50, y, width - 50, y)
+    y -= 18
+    pdf.setFont("Helvetica", 10)
+    for item in items:
+        desc = str(item.get("description") or "Ligne")
+        qty = float(item.get("qty") or 0)
+        unit = float(item.get("unit_price") or 0)
+        line_total = float(item.get("total_ht") or (qty * unit))
+        pdf.drawString(50, y, desc[:52])
+        pdf.drawRightString(360, y, f"{qty:.2f}")
+        pdf.drawRightString(440, y, f"{unit:.2f} EUR")
+        pdf.drawRightString(width - 50, y, f"{line_total:.2f} EUR")
+        y -= 16
+        if y < 120:
+            pdf.showPage()
+            y = height - 70
+            pdf.setFont("Helvetica", 10)
+
+    y -= 8
+    pdf.line(360, y, width - 50, y)
+    y -= 20
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawRightString(width - 50, y, f"Total HT: {total_ht:.2f} EUR")
+    y -= 18
+    pdf.drawRightString(width - 50, y, f"TVA: {tva_amount:.2f} EUR")
+    y -= 18
+    pdf.drawRightString(width - 50, y, f"Total TTC: {total_ttc:.2f} EUR")
+
+    pdf.showPage()
+    pdf.save()
+    return buffer.getvalue()
+
+
+@router.get("/products", response_model=list[ProductResponse])
+async def list_products(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    result = await db.execute(
+        select(Product)
+        .where(Product.organization_id == user.organization_id)
+        .order_by(Product.updated_at.desc())
+    )
+    return result.scalars().all()
+
+
+@router.post("/products", response_model=ProductResponse, status_code=201)
+async def create_product(
+    data: ProductCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    existing = await db.execute(
+        select(Product).where(
+            Product.organization_id == user.organization_id,
+            Product.sku == data.sku.strip().upper(),
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(status_code=400, detail="SKU deja utilise")
+    product = Product(
+        organization_id=user.organization_id,
+        created_by_id=user.id,
+        sku=data.sku.strip().upper(),
+        name=data.name.strip(),
+        category=data.category,
+        description=data.description,
+        unit_price=_to_decimal(data.unit_price),
+        tva_rate=_to_decimal(data.tva_rate),
+        is_active=data.is_active,
+    )
+    db.add(product)
+    await db.flush()
+    return product
+
+
+@router.patch("/products/{product_id}", response_model=ProductResponse)
+async def update_product(
+    product_id: UUID,
+    data: ProductUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    product = await db.get(Product, product_id)
+    if not product or product.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Produit introuvable")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        if key == "sku" and value:
+            setattr(product, key, value.strip().upper())
+        elif key in {"unit_price", "tva_rate"} and value is not None:
+            setattr(product, key, _to_decimal(value))
+        elif isinstance(value, str):
+            setattr(product, key, value.strip())
+        else:
+            setattr(product, key, value)
+    await db.flush()
+    return product
+
+
+@router.delete("/products/{product_id}", status_code=204)
+async def delete_product(
+    product_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    product = await db.get(Product, product_id)
+    if not product or product.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Produit introuvable")
+    await db.delete(product)
+    await db.flush()
+    return None
 
 
 @router.get("/quotes", response_model=list[QuoteResponse])
@@ -78,8 +309,13 @@ async def create_quote(
             raise HTTPException(status_code=400, detail="Le devis doit provenir d'un lead gagné")
     result = await db.execute(select(Quote).where(Quote.organization_id == user.organization_id))
     quote_number = _build_number("DEV", len(result.scalars().all()))
+    normalized_items = await _normalize_items(
+        db,
+        user.organization_id,
+        [item.model_dump() if hasattr(item, "model_dump") else item for item in data.items],
+    )
     total_ht, tva_amount, total_ttc = _compute_totals(
-        [item.model_dump() if hasattr(item, "model_dump") else item for item in data.items], data.tva_rate
+        normalized_items, data.tva_rate
     )
     quote = Quote(
         organization_id=user.organization_id,
@@ -89,7 +325,7 @@ async def create_quote(
         client_id=data.client_id,
         issue_date=data.issue_date,
         valid_until=data.valid_until or (data.issue_date + timedelta(days=30)),
-        items=[item.model_dump() for item in data.items],
+        items=normalized_items,
         total_ht=_to_decimal(total_ht),
         tva_rate=_to_decimal(data.tva_rate),
         tva_amount=_to_decimal(tva_amount),
@@ -113,7 +349,7 @@ async def update_quote(
         raise HTTPException(status_code=404, detail="Devis introuvable")
     payload = data.model_dump(exclude_unset=True)
     if payload.get("items") is not None or payload.get("tva_rate") is not None:
-        items = payload.get("items") or quote.items
+        items = await _normalize_items(db, user.organization_id, payload.get("items") or quote.items)
         tva_rate = payload.get("tva_rate") or float(quote.tva_rate)
         total_ht, tva_amount, total_ttc = _compute_totals(items, float(tva_rate))
         quote.items = items
@@ -178,6 +414,33 @@ async def convert_quote_to_invoice(
     return invoice
 
 
+@router.get("/quotes/{quote_id}/pdf")
+async def download_quote_pdf(
+    quote_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    quote = await db.get(Quote, quote_id)
+    if not quote or quote.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Devis introuvable")
+    payload = _build_pdf_document(
+        title="Devis client",
+        document_number=quote.quote_number,
+        issue_date=quote.issue_date,
+        due_date=quote.valid_until,
+        items=quote.items,
+        total_ht=float(quote.total_ht),
+        tva_amount=float(quote.tva_amount),
+        total_ttc=float(quote.total_ttc),
+    )
+    filename = f"{quote.quote_number}.pdf"
+    return Response(
+        content=payload,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/invoices", response_model=list[InvoiceResponse])
 async def list_invoices(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -202,8 +465,13 @@ async def create_invoice(
 ):
     result = await db.execute(select(Invoice).where(Invoice.organization_id == user.organization_id))
     invoice_number = _build_number("FAC", len(result.scalars().all()))
+    normalized_items = await _normalize_items(
+        db,
+        user.organization_id,
+        [item.model_dump() if hasattr(item, "model_dump") else item for item in data.items],
+    )
     total_ht, tva_amount, total_ttc = _compute_totals(
-        [item.model_dump() if hasattr(item, "model_dump") else item for item in data.items], data.tva_rate
+        normalized_items, data.tva_rate
     )
     invoice = Invoice(
         organization_id=user.organization_id,
@@ -213,7 +481,7 @@ async def create_invoice(
         invoice_number=invoice_number,
         issue_date=data.issue_date,
         due_date=data.due_date or (data.issue_date + timedelta(days=30)),
-        items=[item.model_dump() for item in data.items],
+        items=normalized_items,
         total_ht=_to_decimal(total_ht),
         tva_rate=_to_decimal(data.tva_rate),
         tva_amount=_to_decimal(tva_amount),
@@ -238,10 +506,216 @@ async def update_invoice(
     invoice = await db.get(Invoice, invoice_id)
     if not invoice or invoice.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Facture introuvable")
-    for key, value in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    if payload.get("items") is not None or payload.get("tva_rate") is not None:
+        items = await _normalize_items(db, user.organization_id, payload.get("items") or invoice.items)
+        tva_rate = payload.get("tva_rate") or float(invoice.tva_rate)
+        total_ht, tva_amount, total_ttc = _compute_totals(items, float(tva_rate))
+        invoice.items = items
+        invoice.total_ht = _to_decimal(total_ht)
+        invoice.tva_rate = _to_decimal(float(tva_rate))
+        invoice.tva_amount = _to_decimal(tva_amount)
+        invoice.total_ttc = _to_decimal(total_ttc)
+        balance = max(total_ttc - float(invoice.paid_amount), 0)
+        invoice.balance_due = _to_decimal(balance)
+    for key, value in payload.items():
+        if key in {"items", "tva_rate"}:
+            continue
         setattr(invoice, key, value)
     await db.flush()
     return invoice
+
+
+@router.get("/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    invoice = await db.get(Invoice, invoice_id)
+    if not invoice or invoice.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    payload = _build_pdf_document(
+        title="Facture client",
+        document_number=invoice.invoice_number,
+        issue_date=invoice.issue_date,
+        due_date=invoice.due_date,
+        items=invoice.items,
+        total_ht=float(invoice.total_ht),
+        tva_amount=float(invoice.tva_amount),
+        total_ttc=float(invoice.total_ttc),
+    )
+    filename = f"{invoice.invoice_number}.pdf"
+    return Response(
+        content=payload,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/quotes/{quote_id}/attachments", response_model=list[BillingAttachmentResponse])
+async def list_quote_attachments(
+    quote_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    quote = await db.get(Quote, quote_id)
+    if not quote or quote.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Devis introuvable")
+    result = await db.execute(
+        select(BillingAttachment)
+        .where(
+            BillingAttachment.organization_id == user.organization_id,
+            BillingAttachment.quote_id == quote_id,
+        )
+        .order_by(BillingAttachment.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+@router.post("/quotes/{quote_id}/attachments", response_model=BillingAttachmentResponse, status_code=201)
+async def upload_quote_attachment(
+    quote_id: UUID,
+    file: Annotated[UploadFile, File(...)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    quote = await db.get(Quote, quote_id)
+    if not quote or quote.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Devis introuvable")
+    storage_path, size_bytes = await _save_attachment_file("quotes", quote_id, file)
+    attachment = BillingAttachment(
+        organization_id=user.organization_id,
+        quote_id=quote_id,
+        uploaded_by_id=user.id,
+        original_filename=_sanitize_filename(file.filename or "document.bin"),
+        content_type=file.content_type,
+        size_bytes=size_bytes,
+        storage_path=storage_path,
+    )
+    db.add(attachment)
+    await db.flush()
+    await log_audit(
+        db,
+        organization_id=user.organization_id,
+        actor_id=user.id,
+        action="billing.attachment.upload",
+        resource_type="quote_attachment",
+        resource_id=str(attachment.id),
+        details={
+            "quote_id": str(quote_id),
+            "filename": attachment.original_filename,
+            "size_bytes": attachment.size_bytes,
+        },
+    )
+    return attachment
+
+
+@router.get("/invoices/{invoice_id}/attachments", response_model=list[BillingAttachmentResponse])
+async def list_invoice_attachments(
+    invoice_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    invoice = await db.get(Invoice, invoice_id)
+    if not invoice or invoice.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    result = await db.execute(
+        select(BillingAttachment)
+        .where(
+            BillingAttachment.organization_id == user.organization_id,
+            BillingAttachment.invoice_id == invoice_id,
+        )
+        .order_by(BillingAttachment.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+@router.post("/invoices/{invoice_id}/attachments", response_model=BillingAttachmentResponse, status_code=201)
+async def upload_invoice_attachment(
+    invoice_id: UUID,
+    file: Annotated[UploadFile, File(...)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    invoice = await db.get(Invoice, invoice_id)
+    if not invoice or invoice.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    storage_path, size_bytes = await _save_attachment_file("invoices", invoice_id, file)
+    attachment = BillingAttachment(
+        organization_id=user.organization_id,
+        invoice_id=invoice_id,
+        uploaded_by_id=user.id,
+        original_filename=_sanitize_filename(file.filename or "document.bin"),
+        content_type=file.content_type,
+        size_bytes=size_bytes,
+        storage_path=storage_path,
+    )
+    db.add(attachment)
+    await db.flush()
+    await log_audit(
+        db,
+        organization_id=user.organization_id,
+        actor_id=user.id,
+        action="billing.attachment.upload",
+        resource_type="invoice_attachment",
+        resource_id=str(attachment.id),
+        details={
+            "invoice_id": str(invoice_id),
+            "filename": attachment.original_filename,
+            "size_bytes": attachment.size_bytes,
+        },
+    )
+    return attachment
+
+
+@router.get("/attachments/{attachment_id}/download")
+async def download_attachment(
+    attachment_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    attachment = await db.get(BillingAttachment, attachment_id)
+    if not attachment or attachment.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    if not os.path.exists(attachment.storage_path):
+        raise HTTPException(status_code=404, detail="Fichier indisponible")
+    return FileResponse(
+        path=attachment.storage_path,
+        media_type=attachment.content_type or "application/octet-stream",
+        filename=attachment.original_filename,
+    )
+
+
+@router.delete("/attachments/{attachment_id}", status_code=204)
+async def delete_attachment(
+    attachment_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    attachment = await db.get(BillingAttachment, attachment_id)
+    if not attachment or attachment.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    quote_id = str(attachment.quote_id) if attachment.quote_id else None
+    invoice_id = str(attachment.invoice_id) if attachment.invoice_id else None
+    filename = attachment.original_filename
+    Path(attachment.storage_path).unlink(missing_ok=True)
+    await db.delete(attachment)
+    await db.flush()
+    await log_audit(
+        db,
+        organization_id=user.organization_id,
+        actor_id=user.id,
+        action="billing.attachment.delete",
+        resource_type="billing_attachment",
+        resource_id=str(attachment_id),
+        details={
+            "quote_id": quote_id,
+            "invoice_id": invoice_id,
+            "filename": filename,
+        },
+    )
+    return None
 
 
 @router.get("/payments", response_model=list[PaymentResponse])

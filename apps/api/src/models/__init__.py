@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src.models.audit import AuditLog
-from src.models.billing import Invoice, Payment, Quote
+from src.models.billing import BillingAttachment, Invoice, Payment, Product, Quote
 from src.models.calendar import CalendarEvent, EventAttendee
 from src.models.collaboration import ChatMessage, Notification
 from src.models.crm import Account, Contact, Lead, Project
@@ -16,6 +16,8 @@ __all__ = [
     "Quote",
     "Invoice",
     "Payment",
+    "Product",
+    "BillingAttachment",
     "Account",
     "Contact",
     "Lead",

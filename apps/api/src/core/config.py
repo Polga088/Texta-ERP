@@ -23,6 +23,8 @@ class Settings(BaseSettings):
 
     admin_email: str = "admin@texta.local"
     admin_password: str = "Admin123!"
+    billing_files_dir: str = "/tmp/texta/billing"
+    billing_max_upload_mb: int = 10
 
     @property
     def cors_origins_list(self) -> list[str]:

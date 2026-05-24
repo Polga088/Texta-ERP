@@ -19,6 +19,50 @@ class BillingItem(BaseModel):
     total_ht: float = Field(default=0, ge=0)
 
 
+class ProductCreate(BaseModel):
+    sku: str = Field(min_length=2, max_length=80)
+    name: str = Field(min_length=2, max_length=255)
+    category: str | None = None
+    description: str | None = None
+    unit_price: float = Field(default=0, ge=0)
+    tva_rate: float = Field(default=20, ge=0)
+    is_active: bool = True
+
+
+class ProductUpdate(BaseModel):
+    sku: str | None = Field(default=None, min_length=2, max_length=80)
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    category: str | None = None
+    description: str | None = None
+    unit_price: float | None = Field(default=None, ge=0)
+    tva_rate: float | None = Field(default=None, ge=0)
+    is_active: bool | None = None
+
+
+class ProductResponse(TimestampSchema):
+    id: UUID
+    sku: str
+    name: str
+    category: str | None
+    description: str | None
+    unit_price: Decimal
+    tva_rate: Decimal
+    is_active: bool
+    organization_id: UUID
+    created_by_id: UUID | None
+
+
+class BillingAttachmentResponse(TimestampSchema):
+    id: UUID
+    quote_id: UUID | None
+    invoice_id: UUID | None
+    original_filename: str
+    content_type: str | None
+    size_bytes: int
+    organization_id: UUID
+    uploaded_by_id: UUID | None
+
+
 class QuoteCreate(BaseModel):
     lead_id: UUID | None = None
     client_id: UUID | None = None
@@ -70,6 +114,8 @@ class InvoiceCreate(BaseModel):
 
 class InvoiceUpdate(BaseModel):
     due_date: date | None = None
+    items: list[BillingItem] | None = None
+    tva_rate: float | None = Field(default=None, ge=0)
     status: InvoiceStatus | None = None
     notes: str | None = None
     pdf_url: str | None = None
