@@ -1,7 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, GanttChartSquare, LayoutList, LayoutPanelLeft, Plus, Search, Timer, Trash2, X } from "lucide-react";
+import {
+  Ban,
+  CalendarDays,
+  CalendarRange,
+  CheckSquare,
+  CircleCheck,
+  ClipboardList,
+  GanttChartSquare,
+  History,
+  LayoutList,
+  LayoutPanelLeft,
+  MessageSquare,
+  Paperclip,
+  Play,
+  Plus,
+  Search,
+  SendHorizontal,
+  Timer,
+  Trash2,
+  UserRound,
+  X,
+} from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { Project, Task, TaskKpis, User } from "@/types";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
@@ -286,19 +307,19 @@ export default function TasksPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-4">
+        <Card className="border-l-4 border-l-[var(--color-primary-500)] p-4">
           <p className="text-xs uppercase text-slate-500">Tâches totales</p>
           <p className="text-2xl font-bold text-slate-900">{kpis?.total || 0}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="border-l-4 border-l-[var(--color-info-500)] p-4">
           <p className="text-xs uppercase text-slate-500">En cours</p>
           <p className="text-2xl font-bold text-blue-700">{kpis?.in_progress || 0}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="border-l-4 border-l-[var(--color-success-500)] p-4">
           <p className="text-xs uppercase text-slate-500">Terminées</p>
           <p className="text-2xl font-bold text-emerald-700">{kpis?.done || 0}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="border-l-4 border-l-[var(--color-danger-500)] p-4">
           <p className="text-xs uppercase text-slate-500">Bloquées</p>
           <p className="text-2xl font-bold text-rose-700">{kpis?.blocked || 0}</p>
         </Card>
@@ -398,7 +419,7 @@ export default function TasksPage() {
                   <p className="text-xs text-slate-500">
                     Priorité: {task.priority}
                     {task.due_date ? ` · Échéance: ${task.due_date}` : ""}
-                    {(task.delay_days || 0) > 0 ? ` · ⚠️ ${task.delay_days}j retard` : ""}
+                    {(task.delay_days || 0) > 0 ? ` · ${task.delay_days}j retard` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -468,7 +489,7 @@ export default function TasksPage() {
               >
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-slate-800">{task.title}</p>
-                  <p className="text-xs text-slate-500">{task.start_date || "N/A"} → {task.due_date || "N/A"}</p>
+                  <p className="text-xs text-slate-500">{task.start_date || "—"} → {task.due_date || "—"}</p>
                 </div>
                 <div className="mt-2 h-2 rounded bg-slate-100">
                   <div className="h-2 rounded bg-indigo-500" style={{ width: `${progress}%` }} />
@@ -481,8 +502,8 @@ export default function TasksPage() {
       )}
 
       {createOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30">
-          <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl">
+        <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
+          <div className="modal-content drawer absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[var(--color-slate-200)] bg-white p-5 shadow-[-10px_0_40px_rgba(0,0,0,0.1)]">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Nouvelle Tâche</h2>
               <button onClick={() => setCreateOpen(false)}>
@@ -491,16 +512,20 @@ export default function TasksPage() {
             </div>
             <div className="mb-4 flex flex-wrap gap-2">
               <Button size="sm" variant={createTab === "info" ? "primary" : "secondary"} onClick={() => setCreateTab("info")}>
-                📋 Informations
+                <ClipboardList size={16} strokeWidth={1.5} />
+                Informations
               </Button>
               <Button size="sm" variant={createTab === "planning" ? "primary" : "secondary"} onClick={() => setCreateTab("planning")}>
-                📅 Planification
+                <CalendarRange size={16} strokeWidth={1.5} />
+                Planification
               </Button>
               <Button size="sm" variant={createTab === "assign" ? "primary" : "secondary"} onClick={() => setCreateTab("assign")}>
-                👤 Assignation
+                <UserRound size={16} strokeWidth={1.5} />
+                Assignation
               </Button>
               <Button size="sm" variant={createTab === "checklist" ? "primary" : "secondary"} onClick={() => setCreateTab("checklist")}>
-                ✅ Checklist
+                <CheckSquare size={16} strokeWidth={1.5} />
+                Checklist
               </Button>
             </div>
 
@@ -597,11 +622,11 @@ export default function TasksPage() {
       )}
 
       {drawerTask && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30">
-          <div className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl">
+        <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
+          <div className="modal-content drawer absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-[var(--color-slate-200)] bg-white p-5 shadow-[-10px_0_40px_rgba(0,0,0,0.1)]">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-400">{drawerTask.task_code || "TSK-..."}</p>
+                <p className="card-id">{drawerTask.task_code || "—"}</p>
                 <h2 className="text-xl font-semibold">{drawerTask.title}</h2>
                 <Badge status={drawerTask.status} label={STATUS_LABELS[drawerTask.status]} />
               </div>
@@ -611,19 +636,24 @@ export default function TasksPage() {
             </div>
             <div className="mb-3 flex flex-wrap gap-2">
               <Button size="sm" variant={drawerTab === "details" ? "primary" : "secondary"} onClick={() => setDrawerTab("details")}>
-                📋 Détails
+                <ClipboardList size={16} strokeWidth={1.5} />
+                Détails
               </Button>
               <Button size="sm" variant={drawerTab === "checklist" ? "primary" : "secondary"} onClick={() => setDrawerTab("checklist")}>
-                ✅ Checklist
+                <CheckSquare size={16} strokeWidth={1.5} />
+                Checklist
               </Button>
               <Button size="sm" variant={drawerTab === "comments" ? "primary" : "secondary"} onClick={() => setDrawerTab("comments")}>
-                💬 Commentaires
+                <MessageSquare size={16} strokeWidth={1.5} />
+                Commentaires
               </Button>
               <Button size="sm" variant={drawerTab === "documents" ? "primary" : "secondary"} onClick={() => setDrawerTab("documents")}>
-                📎 Docs
+                <Paperclip size={16} strokeWidth={1.5} />
+                Docs
               </Button>
               <Button size="sm" variant={drawerTab === "history" ? "primary" : "secondary"} onClick={() => setDrawerTab("history")}>
-                📈 Historique
+                <History size={16} strokeWidth={1.5} />
+                Historique
               </Button>
             </div>
 
@@ -631,10 +661,10 @@ export default function TasksPage() {
               <div className="space-y-2 text-sm">
                 <p><span className="font-semibold">Description:</span> {drawerTask.description || "Aucune"}</p>
                 <p><span className="font-semibold">Projet:</span> {drawerTask.project_id}</p>
-                <p><span className="font-semibold">Dates:</span> {drawerTask.start_date || "N/A"} → {drawerTask.due_date || "N/A"}</p>
+                <p><span className="font-semibold">Dates:</span> {drawerTask.start_date || "—"} → {drawerTask.due_date || "—"}</p>
                 <p><span className="font-semibold">Temps:</span> {drawerTask.actual_hours || 0}h / {drawerTask.estimated_hours || 0}h</p>
-                <p><span className="font-semibold">Assigné:</span> {drawerTask.assignee_id || "N/A"}</p>
-                <p><span className="font-semibold">Réviseur:</span> {drawerTask.reviewer_id || "N/A"}</p>
+                <p><span className="font-semibold">Assigné:</span> {drawerTask.assignee_id || "—"}</p>
+                <p><span className="font-semibold">Réviseur:</span> {drawerTask.reviewer_id || "—"}</p>
                 <p><span className="font-semibold">Facturable:</span> {drawerTask.billable ? "Oui" : "Non"}</p>
                 <p><span className="font-semibold">Taux horaire:</span> {drawerTask.hourly_rate || 0}</p>
               </div>
@@ -678,7 +708,10 @@ export default function TasksPage() {
                   ))}
                 </div>
                 <textarea className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Ajouter un commentaire" value={commentText} onChange={(e) => setCommentText(e.target.value)} />
-                <Button size="sm" onClick={addComment}>Envoyer</Button>
+                <Button size="sm" onClick={addComment}>
+                  <SendHorizontal size={16} strokeWidth={1.5} />
+                  Envoyer
+                </Button>
               </div>
             )}
 
@@ -702,20 +735,23 @@ export default function TasksPage() {
                 <li>Statut actuel: {STATUS_LABELS[drawerTask.status]}.</li>
                 <li>
                   Heures: {drawerTask.actual_hours || 0} / {drawerTask.estimated_hours || 0}
-                  {(drawerTask.actual_hours || 0) > (drawerTask.estimated_hours || 0) * 1.2 ? " ⚠️ dépassement" : ""}
+                  {(drawerTask.actual_hours || 0) > (drawerTask.estimated_hours || 0) * 1.2 ? " · dépassement" : ""}
                 </li>
               </ul>
             )}
 
             <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
               <Button size="sm" variant="secondary" onClick={() => updateStatus(drawerTask.id, "in_progress")}>
-                ▶️ Démarrer
+                <Play size={16} strokeWidth={1.5} />
+                Démarrer
               </Button>
               <Button size="sm" variant="secondary" onClick={() => updateStatus(drawerTask.id, "in_review")}>
-                🔄 Soumettre revue
+                <Timer size={16} strokeWidth={1.5} />
+                Soumettre revue
               </Button>
               <Button size="sm" variant="secondary" onClick={() => updateStatus(drawerTask.id, "done")}>
-                ✅ Terminer
+                <CircleCheck size={16} strokeWidth={1.5} />
+                Terminer
               </Button>
               <Button
                 size="sm"
@@ -726,13 +762,14 @@ export default function TasksPage() {
                   updateStatus(drawerTask.id, "blocked", { block_reason: reason });
                 }}
               >
-                🚫 Bloquer
+                <Ban size={16} strokeWidth={1.5} />
+                Bloquer
               </Button>
               <div className="ml-auto flex items-center gap-2">
                 <Input type="number" value={timeLogHours} onChange={(e) => setTimeLogHours(e.target.value)} className="w-20" />
                 <Input value={timeLogDesc} onChange={(e) => setTimeLogDesc(e.target.value)} placeholder="Description" className="w-40" />
                 <Button size="sm" onClick={logTime}>
-                  <Timer size={14} />
+                  <Timer size={16} strokeWidth={1.5} />
                   Log time
                 </Button>
               </div>
@@ -748,7 +785,7 @@ export default function TasksPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white shadow-xl">
+        <div className="toast-enter fixed bottom-4 right-4 z-50 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white shadow-xl">
           {toast}
         </div>
       )}

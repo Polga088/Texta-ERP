@@ -10,23 +10,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", ...props }, ref) => {
     const variants = {
       primary:
-        "bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-indigo-300",
+        "btn-primary bg-[var(--color-primary-600)] text-white shadow-[var(--shadow-sm)] hover:bg-[var(--color-primary-500)] active:bg-[var(--color-primary-700)]",
       secondary:
-        "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100",
-      ghost: "text-slate-600 hover:bg-slate-100",
-      danger: "bg-rose-600 text-white hover:bg-rose-500",
+        "bg-[var(--color-slate-0)] text-[var(--color-slate-700)] border border-[var(--color-slate-200)] hover:bg-[var(--color-slate-50)]",
+      ghost: "text-[var(--color-slate-600)] hover:bg-[var(--color-slate-100)]",
+      danger: "bg-[var(--color-danger-500)] text-white hover:bg-[var(--color-danger-600)]",
     };
     const sizes = {
-      sm: "px-3 py-1.5 text-sm",
-      md: "px-4 py-2 text-sm",
-      lg: "px-6 py-3 text-base",
+      sm: "h-9 px-3 text-sm",
+      md: "h-11 px-4 text-sm",
+      lg: "h-12 px-6 text-base",
     };
 
     return (
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-70",
+          "inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] font-medium transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70",
           variants[variant],
           sizes[size],
           className,

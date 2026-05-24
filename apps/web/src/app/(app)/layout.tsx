@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Clock3, Home, LogOut } from "lucide-react";
+import { Bell, Clock3, Home, LogOut, Moon, Sun } from "lucide-react";
 import { api, clearTokens, isAuthenticated } from "@/lib/api";
 import { UserNotification } from "@/types";
 
 const SESSION_STARTED_AT_KEY = "session_started_at";
 const LAST_ACTIVITY_AT_KEY = "last_activity_at";
 const INACTIVITY_TIMEOUT_MINUTES_KEY = "inactivity_timeout_minutes";
+const THEME_KEY = "texta_theme";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -28,6 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [inactivityMinutes, setInactivityMinutes] = useState(30);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const lastActivityRef = useRef<number>(Date.now());
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,
@@ -99,6 +101,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedTheme = localStorage.getItem(THEME_KEY);
+    const initialTheme = storedTheme === "dark" ? "dark" : "light";
+    setTheme(initialTheme);
+    document.documentElement.classList.toggle("dark", initialTheme === "dark");
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(THEME_KEY, nextTheme);
+    }
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  };
+
   const markAsRead = async (id: string) => {
     await api(`/collaboration/notifications/${id}/read`, { method: "PATCH" });
     const refreshed = await api<UserNotification[]>("/collaboration/notifications");
@@ -115,28 +134,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 lg:px-8">
+    <div className="page-background min-h-screen">
+      <header className="navbar">
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 md:px-2 lg:px-4">
           <Link href="/home" className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-            <span className="rounded-lg bg-indigo-100 p-1.5 text-indigo-600">
-              <Home size={14} />
+            <span className="icon-container settings h-9 w-9 rounded-[var(--radius-md)]">
+              <Home size={16} strokeWidth={1.5} />
             </span>
             Accueil Applications
           </Link>
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 md:inline-flex">
-              <Clock3 size={14} className="text-indigo-500" />
+              <Clock3 size={14} strokeWidth={1.5} className="text-[var(--color-primary-500)]" />
               Session {formatDuration(elapsedSeconds)}
               <span className="text-slate-400">· coupure {inactivityMinutes} min</span>
             </div>
+
+            <button
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-slate-200)] bg-[var(--color-slate-0)] px-3 py-2 text-sm font-medium text-[var(--color-slate-600)] transition hover:bg-[var(--color-slate-100)]"
+            >
+              {theme === "dark" ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
+              {theme === "dark" ? "Clair" : "Sombre"}
+            </button>
 
             <div className="relative">
               <button
                 onClick={() => setIsNotifOpen((open) => !open)}
                 className="relative inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
               >
-                <Bell size={16} />
+                <Bell size={16} strokeWidth={1.5} />
                 Notifications
                 {unreadCount > 0 && (
                   <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">
@@ -186,13 +213,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={logout}
               className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
             >
-              <LogOut size={16} />
+              <LogOut size={16} strokeWidth={1.5} />
               Déconnexion
             </button>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</main>
+      <main className="page-enter mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</main>
     </div>
   );
 }
