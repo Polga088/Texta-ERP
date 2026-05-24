@@ -105,6 +105,7 @@ body {
     radial-gradient(at 100% 100%, rgb(16 185 129 / 0.02) 0, transparent 50%);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {
@@ -358,7 +359,7 @@ html.dark .navbar {
 
 .dark .modal-overlay {
   background: rgb(2 6 23 / 0.7);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px);
 }
 
 .dark .kanban-column {
@@ -397,9 +398,15 @@ html.dark .navbar {
 .dark .input-field,
 .dark .select-field,
 .dark .textarea-field {
-  background-color: var(--bg-inset);
-  border-color: var(--border-default);
+  background-color: var(--color-slate-900);
+  border-color: var(--color-slate-700);
   color: var(--text-primary);
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 .dark .input-field::placeholder {
@@ -663,6 +670,13 @@ html.dark .navbar {
 
   .responsive-table td:last-child {
     border-bottom: none;
+  }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-tabbar {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(64px + env(safe-area-inset-bottom));
   }
 }
 

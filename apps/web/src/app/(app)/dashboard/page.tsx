@@ -13,7 +13,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { DashboardOverview, DashboardReports } from "@/types";
+import { BillingKpis, DashboardOverview, DashboardReports, Invoice } from "@/types";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
@@ -45,6 +45,8 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState<PeriodFilter>("this_month");
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [reports, setReports] = useState<DashboardReports | null>(null);
+  const [billingKpis, setBillingKpis] = useState<BillingKpis | null>(null);
+  const [outstandingBalance, setOutstandingBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,12 +54,20 @@ export default function DashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const [overviewResponse, reportsResponse] = await Promise.all([
+      const [overviewResponse, reportsResponse, billingResponse, invoiceRows] = await Promise.all([
         api<DashboardOverview>(`/dashboard/overview?period=${period}`),
         api<DashboardReports>(`/dashboard/reports?period=${period}`),
+        api<BillingKpis>("/billing/kpis"),
+        api<Invoice[]>("/billing/invoices"),
       ]);
       setOverview(overviewResponse);
       setReports(reportsResponse);
+      setBillingKpis(billingResponse);
+      setOutstandingBalance(
+        invoiceRows
+          .filter((invoice) => invoice.status !== "paid" && invoice.status !== "cancelled")
+          .reduce((sum, invoice) => sum + (Number(invoice.balance_due) || 0), 0),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger le dashboard");
     } finally {
@@ -227,6 +237,30 @@ export default function DashboardPage() {
             trendTone={overview.kpis.blocked_tasks.variation >= 0 ? "positive" : "negative"}
             icon={AlertTriangle}
             color="#ef4444"
+          />
+          <KpiCard
+            title="CA Facturé (mois)"
+            value={`${formatMoney(billingKpis?.invoiced_month || 0)} MAD`}
+            trend={`Facturation du mois en cours`}
+            trendTone="positive"
+            icon={TrendingUp}
+            color="#6366f1"
+          />
+          <KpiCard
+            title="Factures en retard"
+            value={String(billingKpis?.overdue_invoices || 0)}
+            trend={`Total factures overdue`}
+            trendTone="negative"
+            icon={AlertTriangle}
+            color="#ef4444"
+          />
+          <KpiCard
+            title="Solde client impayé"
+            value={`${formatMoney(outstandingBalance)} MAD`}
+            trend={`Somme des soldes non regles`}
+            trendTone="negative"
+            icon={Clock3}
+            color="#f59e0b"
           />
         </div>
       )}

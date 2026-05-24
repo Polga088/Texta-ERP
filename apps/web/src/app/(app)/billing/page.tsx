@@ -14,6 +14,15 @@ function formatMoney(value: number): string {
   return `${new Intl.NumberFormat("fr-MA").format(value || 0)} MAD`;
 }
 
+function statusClass(status: string): string {
+  if (status === "paid" || status === "accepted") return "badge badge-success";
+  if (status === "overdue") return "badge badge-danger animate-pulse";
+  if (status === "partial") return "badge badge-warning";
+  if (status === "sent") return "badge badge-primary";
+  if (status === "cancelled") return "badge badge-slate line-through";
+  return "badge badge-slate";
+}
+
 export default function BillingPage() {
   const [tab, setTab] = useState<Tab>("quotes");
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -413,10 +422,35 @@ export default function BillingPage() {
     await load();
   };
 
+  const sendQuote = async (quoteId: string) => {
+    await api(`/billing/quotes/${quoteId}/send`, { method: "POST" });
+    await load();
+  };
+
+  const deleteQuote = async (quoteId: string) => {
+    await api(`/billing/quotes/${quoteId}`, { method: "DELETE" });
+    await load();
+  };
+
   const convertQuote = async (quoteId: string) => {
     await api(`/billing/quotes/${quoteId}/convert-to-invoice`, { method: "POST" });
     await load();
     setTab("invoices");
+  };
+
+  const sendInvoice = async (invoiceId: string) => {
+    await api(`/billing/invoices/${invoiceId}/send`, { method: "POST" });
+    await load();
+  };
+
+  const cancelInvoice = async (invoiceId: string) => {
+    await api(`/billing/invoices/${invoiceId}/cancel`, { method: "POST" });
+    await load();
+  };
+
+  const deleteInvoice = async (invoiceId: string) => {
+    await api(`/billing/invoices/${invoiceId}`, { method: "DELETE" });
+    await load();
   };
 
   return (
@@ -502,9 +536,16 @@ export default function BillingPage() {
                   <td className="px-4 py-3" data-label="Date">{row.issue_date}</td>
                   <td className="px-4 py-3" data-label="Validité">{row.valid_until}</td>
                   <td className="px-4 py-3" data-label="Total TTC">{formatMoney(row.total_ttc)}</td>
-                  <td className="px-4 py-3" data-label="Statut">{row.status}</td>
+                  <td className="px-4 py-3" data-label="Statut">
+                    <span className={statusClass(row.status)}>{row.status}</span>
+                  </td>
                   <td className="px-4 py-3" data-label="Actions">
                     <div className="flex gap-2">
+                      {row.status === "draft" && (
+                        <Button size="sm" variant="ghost" onClick={() => sendQuote(row.id)}>
+                          Envoyer
+                        </Button>
+                      )}
                       {(row.status === "draft" || row.status === "sent") && (
                         <Button size="sm" variant="secondary" onClick={() => acceptQuote(row.id)}>
                           <CheckCircle2 size={14} />
@@ -531,6 +572,11 @@ export default function BillingPage() {
                         <Paperclip size={14} />
                         Docs
                       </Button>
+                      {row.status === "draft" && (
+                        <Button size="sm" variant="ghost" onClick={() => deleteQuote(row.id)}>
+                          Supprimer
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -564,12 +610,24 @@ export default function BillingPage() {
                   <td className="px-4 py-3" data-label="Total">{formatMoney(row.total_ttc)}</td>
                   <td className="px-4 py-3" data-label="Payé">{formatMoney(row.paid_amount)}</td>
                   <td className="px-4 py-3" data-label="Reste">{formatMoney(row.balance_due)}</td>
-                  <td className="px-4 py-3" data-label="Statut">{row.status}</td>
+                  <td className="px-4 py-3" data-label="Statut">
+                    <span className={statusClass(row.status)}>{row.status}</span>
+                  </td>
                   <td className="px-4 py-3" data-label="Paiement">
                     <div className="flex gap-2">
                       <Button size="sm" variant="secondary" onClick={() => setPaymentInvoiceId(row.id)}>
                         Ajouter paiement
                       </Button>
+                      {row.status === "draft" && (
+                        <Button size="sm" variant="ghost" onClick={() => sendInvoice(row.id)}>
+                          Envoyer
+                        </Button>
+                      )}
+                      {row.status !== "cancelled" && row.status !== "paid" && (
+                        <Button size="sm" variant="ghost" onClick={() => cancelInvoice(row.id)}>
+                          Annuler
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
@@ -585,6 +643,11 @@ export default function BillingPage() {
                         <Paperclip size={14} />
                         Docs
                       </Button>
+                      {row.status === "draft" && (
+                        <Button size="sm" variant="ghost" onClick={() => deleteInvoice(row.id)}>
+                          Supprimer
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
