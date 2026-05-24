@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,6 +16,7 @@ import { api } from "@/lib/api";
 import { DashboardOverview, DashboardReports } from "@/types";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { KpiCard } from "@/components/ui/kpi-card";
 
 type DashboardTab = "dashboard" | "reports" | "analytics";
 type PeriodFilter = "today" | "this_week" | "this_month" | "this_quarter" | "this_year";
@@ -30,46 +31,6 @@ const PERIOD_OPTIONS: Array<{ value: PeriodFilter; label: string }> = [
 
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("fr-MA", { maximumFractionDigits: 0 }).format(value);
-}
-
-function KpiCard({
-  label,
-  value,
-  variation,
-  icon: Icon,
-  tone,
-}: {
-  label: string;
-  value: string;
-  variation: number;
-  icon: ComponentType<{ size?: number; className?: string }>;
-  tone: "violet" | "green" | "blue" | "indigo" | "red" | "orange";
-}) {
-  const toneClass: Record<typeof tone, string> = {
-    violet: "bg-violet-50 text-violet-700",
-    green: "bg-emerald-50 text-emerald-700",
-    blue: "bg-blue-50 text-blue-700",
-    indigo: "bg-indigo-50 text-indigo-700",
-    red: "bg-rose-50 text-rose-700",
-    orange: "bg-orange-50 text-orange-700",
-  };
-  const isPositive = variation >= 0;
-  return (
-    <Card className="kpi-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="kpi-label text-xs uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="kpi-value mt-2 text-2xl font-bold text-slate-900">{value}</p>
-          <p className={`mt-1 text-xs ${isPositive ? "text-emerald-600" : "text-rose-600"}`}>
-            {isPositive ? "↑" : "↓"} {Math.abs(variation).toFixed(1)}% vs période précédente
-          </p>
-        </div>
-        <div className={`kpi-icon rounded-xl p-2 ${toneClass[tone]}`}>
-          <Icon size={20} />
-        </div>
-      </div>
-    </Card>
-  );
 }
 
 function toCsv(rows: Record<string, unknown>[]): string {
@@ -204,60 +165,68 @@ export default function DashboardPage() {
       {overview && (
         <div className="kpi-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            label="CA Pipeline"
+            title="CA Pipeline"
             value={`${formatMoney(overview.kpis.pipeline_revenue.value)} MAD`}
-            variation={overview.kpis.pipeline_revenue.variation}
+            trend={`${overview.kpis.pipeline_revenue.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.pipeline_revenue.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.pipeline_revenue.variation >= 0 ? "positive" : "negative"}
             icon={TrendingUp}
-            tone="violet"
+            color="#8b5cf6"
           />
           <KpiCard
-            label="CA Gagné"
+            title="CA Gagné"
             value={`${formatMoney(overview.kpis.won_revenue.value)} MAD`}
-            variation={overview.kpis.won_revenue.variation}
+            trend={`${overview.kpis.won_revenue.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.won_revenue.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.won_revenue.variation >= 0 ? "positive" : "negative"}
             icon={Trophy}
-            tone="green"
+            color="#10b981"
           />
           <KpiCard
-            label="Taux Conversion"
+            title="Taux Conversion"
             value={`${overview.kpis.conversion_rate.value.toFixed(1)}%`}
-            variation={overview.kpis.conversion_rate.variation}
+            trend={`${overview.kpis.conversion_rate.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.conversion_rate.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.conversion_rate.variation >= 0 ? "positive" : "negative"}
             icon={TrendingUp}
-            tone="blue"
+            color="#3b82f6"
           />
           <KpiCard
-            label="Projets Actifs"
+            title="Projets Actifs"
             value={String(Math.round(overview.kpis.active_projects.value))}
-            variation={overview.kpis.active_projects.variation}
+            trend={`${overview.kpis.active_projects.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.active_projects.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.active_projects.variation >= 0 ? "positive" : "negative"}
             icon={FolderKanban}
-            tone="indigo"
+            color="#6366f1"
           />
           <KpiCard
-            label="Projets en Retard"
+            title="Projets en Retard"
             value={String(Math.round(overview.kpis.delayed_projects.value))}
-            variation={overview.kpis.delayed_projects.variation}
+            trend={`${overview.kpis.delayed_projects.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.delayed_projects.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.delayed_projects.variation >= 0 ? "positive" : "negative"}
             icon={AlertTriangle}
-            tone="red"
+            color="#ef4444"
           />
           <KpiCard
-            label="Heures Loggées"
+            title="Heures Loggées"
             value={`${overview.kpis.logged_hours.value.toFixed(1)}h`}
-            variation={overview.kpis.logged_hours.variation}
+            trend={`${overview.kpis.logged_hours.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.logged_hours.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.logged_hours.variation >= 0 ? "positive" : "negative"}
             icon={Timer}
-            tone="orange"
+            color="#f59e0b"
           />
           <KpiCard
-            label="Tâches Terminées"
+            title="Tâches Terminées"
             value={String(Math.round(overview.kpis.completed_tasks.value))}
-            variation={overview.kpis.completed_tasks.variation}
+            trend={`${overview.kpis.completed_tasks.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.completed_tasks.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.completed_tasks.variation >= 0 ? "positive" : "negative"}
             icon={CheckCircle2}
-            tone="green"
+            color="#10b981"
           />
           <KpiCard
-            label="Tâches Bloquées"
+            title="Tâches Bloquées"
             value={String(Math.round(overview.kpis.blocked_tasks.value))}
-            variation={overview.kpis.blocked_tasks.variation}
+            trend={`${overview.kpis.blocked_tasks.variation >= 0 ? "↑" : "↓"} ${Math.abs(overview.kpis.blocked_tasks.variation).toFixed(1)}% vs période précédente`}
+            trendTone={overview.kpis.blocked_tasks.variation >= 0 ? "positive" : "negative"}
             icon={AlertTriangle}
-            tone="red"
+            color="#ef4444"
           />
         </div>
       )}

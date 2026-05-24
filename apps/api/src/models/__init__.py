@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.models.audit import AuditLog
+from src.models.billing import Invoice, Payment, Quote
 from src.models.calendar import CalendarEvent, EventAttendee
 from src.models.collaboration import ChatMessage, Notification
 from src.models.crm import Account, Contact, Lead, Project
@@ -12,6 +13,9 @@ from src.models.time_tracking import TimeEntry
 
 __all__ = [
     "AuditLog",
+    "Quote",
+    "Invoice",
+    "Payment",
     "Account",
     "Contact",
     "Lead",

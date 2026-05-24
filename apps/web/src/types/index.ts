@@ -419,3 +419,69 @@ export interface TimeEntry {
   note?: string;
   source: string;
 }
+
+export interface Quote {
+  id: string;
+  quote_number: string;
+  lead_id?: string;
+  client_id?: string;
+  issue_date: string;
+  valid_until: string;
+  items: Array<{
+    product_id?: string;
+    description: string;
+    qty: number;
+    unit_price: number;
+    discount_percent?: number;
+    total_ht: number;
+  }>;
+  total_ht: number;
+  tva_rate: number;
+  tva_amount: number;
+  total_ttc: number;
+  status: "draft" | "sent" | "accepted" | "rejected" | "expired";
+  pdf_url?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Invoice {
+  id: string;
+  quote_id?: string;
+  invoice_number: string;
+  client_id?: string;
+  issue_date: string;
+  due_date: string;
+  items: Quote["items"];
+  total_ht: number;
+  tva_rate: number;
+  tva_amount: number;
+  total_ttc: number;
+  paid_amount: number;
+  balance_due: number;
+  status: "draft" | "sent" | "paid" | "partial" | "overdue" | "cancelled";
+  pdf_url?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Payment {
+  id: string;
+  invoice_id: string;
+  amount: number;
+  payment_date: string;
+  method: "transfer" | "card" | "cash" | "check";
+  reference?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BillingKpis {
+  invoiced_month: number;
+  overdue_invoices: number;
+  pending_quotes: number;
+  collected_month: number;
+}

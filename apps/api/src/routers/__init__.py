@@ -6,6 +6,7 @@ from src.routers import (
     accounts,
     audit,
     auth,
+    billing,
     calendar,
     collaboration,
     contacts,
@@ -37,3 +38,4 @@ api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(leads.router, prefix="/leads", tags=["leads"])
 api_router.include_router(collaboration.router, prefix="/collaboration", tags=["collaboration"])
 api_router.include_router(time_tracking.router, prefix="/time-entries", tags=["time-tracking"])
+api_router.include_router(billing.router, prefix="/billing", tags=["billing"])

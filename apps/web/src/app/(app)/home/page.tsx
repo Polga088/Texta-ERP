@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   MessageSquare,
@@ -87,6 +88,14 @@ const apps = [
     icon: CalendarDays,
     moduleClass: "projects",
     glow: "rgba(37, 99, 235, 0.2)",
+  },
+  {
+    href: "/billing",
+    label: "Facturation",
+    description: "Devis, factures, paiements et suivi des encaissements.",
+    icon: FileText,
+    moduleClass: "settings",
+    glow: "rgba(217, 119, 6, 0.22)",
   },
   {
     href: "/audit",
