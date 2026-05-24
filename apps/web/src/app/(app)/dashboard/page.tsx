@@ -55,16 +55,16 @@ function KpiCard({
   };
   const isPositive = variation >= 0;
   return (
-    <Card className="p-4">
+    <Card className="kpi-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+          <p className="kpi-label text-xs uppercase tracking-wide text-slate-500">{label}</p>
+          <p className="kpi-value mt-2 text-2xl font-bold text-slate-900">{value}</p>
           <p className={`mt-1 text-xs ${isPositive ? "text-emerald-600" : "text-rose-600"}`}>
             {isPositive ? "↑" : "↓"} {Math.abs(variation).toFixed(1)}% vs période précédente
           </p>
         </div>
-        <div className={`rounded-xl p-2 ${toneClass[tone]}`}>
+        <div className={`kpi-icon rounded-xl p-2 ${toneClass[tone]}`}>
           <Icon size={20} />
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function DashboardPage() {
       {loading && <p className="text-sm text-slate-500">Chargement des données...</p>}
 
       {overview && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="kpi-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             label="CA Pipeline"
             value={`${formatMoney(overview.kpis.pipeline_revenue.value)} MAD`}
@@ -352,7 +352,7 @@ export default function DashboardPage() {
                   <li key={item.id} className="rounded-xl border border-slate-100 p-3">
                     <p className="font-medium text-slate-800">{item.title}</p>
                     <p className="text-xs text-slate-500">
-                      {formatMoney(item.deal_value)} MAD · {item.owner_name} · {item.expected_close_date || "N/A"}
+                      {formatMoney(item.deal_value)} MAD · {item.owner_name} · {item.expected_close_date || "—"}
                     </p>
                   </li>
                 ))}
@@ -378,7 +378,7 @@ export default function DashboardPage() {
                   <li key={item.id} className="rounded-xl border border-slate-100 p-3">
                     <p className="font-medium text-slate-800">{item.title}</p>
                     <p className="text-xs text-slate-500">
-                      {item.project_name} · {item.assignee_name} · {item.due_date || "N/A"}
+                      {item.project_name} · {item.assignee_name} · {item.due_date || "—"}
                     </p>
                   </li>
                 ))}
@@ -422,7 +422,7 @@ export default function DashboardPage() {
           <Card>
             <CardTitle className="text-base">Rapport Performance Commerciale</CardTitle>
             <div className="mt-3 overflow-auto">
-              <table className="w-full min-w-[760px] text-sm">
+              <table className="responsive-table w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
                     <th className="pb-2">Commercial</th>
@@ -436,12 +436,12 @@ export default function DashboardPage() {
                 <tbody>
                   {reports.commercial_performance.map((row) => (
                     <tr key={row.user_name} className="border-b border-slate-50">
-                      <td className="py-2">{row.user_name}</td>
-                      <td className="py-2">{row.leads_created}</td>
-                      <td className="py-2">{row.leads_won}</td>
-                      <td className="py-2">{formatMoney(row.won_revenue)} MAD</td>
-                      <td className="py-2">{row.conversion_rate.toFixed(1)}%</td>
-                      <td className="py-2">{row.avg_cycle_days.toFixed(1)} j</td>
+                      <td className="py-2" data-label="Commercial">{row.user_name}</td>
+                      <td className="py-2" data-label="Leads créés">{row.leads_created}</td>
+                      <td className="py-2" data-label="Leads gagnés">{row.leads_won}</td>
+                      <td className="py-2" data-label="CA gagné">{formatMoney(row.won_revenue)} MAD</td>
+                      <td className="py-2" data-label="Conversion">{row.conversion_rate.toFixed(1)}%</td>
+                      <td className="py-2" data-label="Délai moyen">{row.avg_cycle_days.toFixed(1)} j</td>
                     </tr>
                   ))}
                 </tbody>
@@ -452,7 +452,7 @@ export default function DashboardPage() {
           <Card>
             <CardTitle className="text-base">Rapport État des Projets</CardTitle>
             <div className="mt-3 overflow-auto">
-              <table className="w-full min-w-[860px] text-sm">
+              <table className="responsive-table w-full min-w-[860px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
                     <th className="pb-2">Projet</th>
@@ -468,14 +468,14 @@ export default function DashboardPage() {
                 <tbody>
                   {reports.project_status.map((row) => (
                     <tr key={row.project_name} className="border-b border-slate-50">
-                      <td className="py-2">{row.project_name}</td>
-                      <td className="py-2">{row.client_name}</td>
-                      <td className="py-2">{formatMoney(row.budget_total)} MAD</td>
-                      <td className="py-2">{formatMoney(row.budget_consumed)} MAD</td>
-                      <td className="py-2">{row.budget_percent.toFixed(1)}%</td>
-                      <td className="py-2">{row.delay_days}j</td>
-                      <td className="py-2">{row.health_status}</td>
-                      <td className="py-2">{row.team_size}</td>
+                      <td className="py-2" data-label="Projet">{row.project_name}</td>
+                      <td className="py-2" data-label="Client">{row.client_name}</td>
+                      <td className="py-2" data-label="Budget">{formatMoney(row.budget_total)} MAD</td>
+                      <td className="py-2" data-label="Consommé">{formatMoney(row.budget_consumed)} MAD</td>
+                      <td className="py-2" data-label="%">{row.budget_percent.toFixed(1)}%</td>
+                      <td className="py-2" data-label="Retard">{row.delay_days}j</td>
+                      <td className="py-2" data-label="Health">{row.health_status}</td>
+                      <td className="py-2" data-label="Équipe">{row.team_size}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -523,7 +523,7 @@ export default function DashboardPage() {
                     {row.projects_count} projets · {formatMoney(row.revenue)} MAD · {row.status}
                   </p>
                   <p className="mt-1 text-[11px] text-slate-400">
-                    Dernier contact: {row.last_contact ? new Date(row.last_contact).toLocaleDateString("fr-FR") : "N/A"}
+                    Dernier contact: {row.last_contact ? new Date(row.last_contact).toLocaleDateString("fr-FR") : "—"}
                   </p>
                 </div>
               ))}

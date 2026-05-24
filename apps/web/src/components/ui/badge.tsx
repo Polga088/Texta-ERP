@@ -21,7 +21,7 @@ export function Badge({ status, label }: { status: string; label?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex h-[22px] max-w-full items-center whitespace-nowrap rounded-[var(--radius-full)] px-[10px] py-[3px] text-[11px] font-bold uppercase leading-none tracking-[0.02em]",
+        "badge inline-flex h-[22px] max-w-full items-center whitespace-nowrap rounded-[var(--radius-full)] px-[10px] py-[3px] text-[11px] font-bold uppercase leading-none tracking-[0.02em]",
         colors[status] || "bg-[var(--color-slate-100)] text-[var(--color-slate-700)]",
       )}
       title={label || status}

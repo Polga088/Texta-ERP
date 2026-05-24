@@ -503,8 +503,8 @@ export default function TasksPage() {
 
       {createOpen && (
         <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
-          <div className="modal-content drawer absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[var(--color-slate-200)] bg-white p-5 shadow-[-10px_0_40px_rgba(0,0,0,0.1)]">
-            <div className="mb-3 flex items-center justify-between">
+          <div className="modal-content modal-panel drawer absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[var(--color-slate-200)] bg-white p-5 shadow-[-10px_0_40px_rgba(0,0,0,0.1)]">
+            <div className="drawer-header mb-3 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Nouvelle Tâche</h2>
               <button onClick={() => setCreateOpen(false)}>
                 <X size={18} />
@@ -623,8 +623,8 @@ export default function TasksPage() {
 
       {drawerTask && (
         <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
-          <div className="modal-content drawer absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-[var(--color-slate-200)] bg-white p-5 shadow-[-10px_0_40px_rgba(0,0,0,0.1)]">
-            <div className="mb-3 flex items-center justify-between">
+          <div className="modal-content modal-panel drawer absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-[var(--color-slate-200)] bg-white p-5 shadow-[-10px_0_40px_rgba(0,0,0,0.1)]">
+            <div className="drawer-header mb-3 flex items-center justify-between">
               <div>
                 <p className="card-id">{drawerTask.task_code || "—"}</p>
                 <h2 className="text-xl font-semibold">{drawerTask.title}</h2>

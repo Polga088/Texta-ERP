@@ -17,7 +17,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       danger: "bg-[var(--color-danger-500)] text-white hover:bg-[var(--color-danger-600)]",
     };
     const sizes = {
-      sm: "h-9 px-3 text-sm",
+      sm: "h-11 px-3 text-sm",
       md: "h-11 px-4 text-sm",
       lg: "h-12 px-6 text-base",
     };

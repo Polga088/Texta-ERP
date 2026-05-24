@@ -3,14 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Clock3, Home, LogOut, Moon, Sun } from "lucide-react";
+import {
+  Bell,
+  CheckCircle2,
+  Clock3,
+  FolderKanban,
+  Home,
+  LogOut,
+  Menu,
+  Moon,
+  Sun,
+  Target,
+} from "lucide-react";
 import { api, clearTokens, isAuthenticated } from "@/lib/api";
 import { UserNotification } from "@/types";
 
 const SESSION_STARTED_AT_KEY = "session_started_at";
 const LAST_ACTIVITY_AT_KEY = "last_activity_at";
 const INACTIVITY_TIMEOUT_MINUTES_KEY = "inactivity_timeout_minutes";
-const THEME_KEY = "texta_theme";
+const THEME_KEY = "theme";
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -103,8 +114,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const storedTheme = localStorage.getItem(THEME_KEY);
-    const initialTheme = storedTheme === "dark" ? "dark" : "light";
+    const storedTheme = localStorage.getItem(THEME_KEY) || localStorage.getItem("texta_theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initialTheme = storedTheme === "dark" || (!storedTheme && prefersDark) ? "dark" : "light";
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
   }, []);
@@ -152,10 +164,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={toggleTheme}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-slate-200)] bg-[var(--color-slate-0)] px-3 py-2 text-sm font-medium text-[var(--color-slate-600)] transition hover:bg-[var(--color-slate-100)]"
+              className="relative h-6 w-11 rounded-full bg-[var(--color-slate-200)] transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-[var(--color-slate-700)]"
+              aria-label="Toggle dark mode"
             >
-              {theme === "dark" ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
-              {theme === "dark" ? "Clair" : "Sombre"}
+              <span
+                className={`absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                  theme === "dark" ? "translate-x-5" : "translate-x-0"
+                }`}
+              >
+                {theme === "dark" ? (
+                  <Moon size={10} strokeWidth={1.5} className="text-slate-800" />
+                ) : (
+                  <Sun size={10} strokeWidth={1.5} className="text-amber-500" />
+                )}
+              </span>
             </button>
 
             <div className="relative">
@@ -219,7 +241,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="page-enter mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</main>
+      <main className="page-enter mx-auto max-w-7xl p-4 pb-24 md:p-6 md:pb-6 lg:p-8">{children}</main>
+      <nav className="mobile-tabbar fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-[var(--border-default)] bg-white/90 px-2 backdrop-blur-lg dark:bg-slate-900/90 md:hidden">
+        {[
+          { href: "/home", label: "Accueil", icon: Home },
+          { href: "/projects", label: "Projets", icon: FolderKanban },
+          { href: "/leads", label: "Leads", icon: Target },
+          { href: "/tasks", label: "Tâches", icon: CheckCircle2 },
+          { href: "/dashboard", label: "Plus", icon: Menu },
+        ].map((tab) => {
+          const active = pathname.startsWith(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] p-2 text-[10px] font-medium ${
+                active ? "text-[var(--color-primary-600)]" : "text-[var(--text-secondary)]"
+              }`}
+            >
+              <tab.icon size={20} strokeWidth={1.5} />
+              <span>{tab.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

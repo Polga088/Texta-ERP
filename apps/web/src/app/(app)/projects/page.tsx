@@ -157,15 +157,15 @@ function ProjectColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`min-h-[360px] rounded-2xl border bg-white p-3 shadow-sm transition ${
+      className={`kanban-column min-h-[360px] rounded-2xl border bg-white p-3 shadow-sm transition ${
         isOver ? "border-indigo-300 bg-indigo-50/40" : "border-slate-200"
       }`}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="kanban-column-header mb-3 flex items-center justify-between">
         <Badge status={status} label={STATUS_FR[status] || status} />
         <span className="text-xs text-slate-400">{projects.length}</span>
       </div>
-      <div className="space-y-2">
+      <div className="kanban-cards-container space-y-2 md:space-y-2">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} onOpen={onOpen} />
         ))}
@@ -379,7 +379,7 @@ export default function ProjectsPage() {
 
       {view === "kanban" ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-          <div className="grid gap-3 xl:grid-cols-7">
+          <div className="kanban-board grid gap-3 xl:grid-cols-7">
             {STATUS_ORDER.map((status) => (
               <ProjectColumn key={status} status={status} projects={grouped[status]} onOpen={setSelectedProject} />
             ))}
@@ -387,7 +387,7 @@ export default function ProjectsPage() {
         </DndContext>
       ) : (
         <Card className="overflow-x-auto p-0">
-          <table className="min-w-full text-sm">
+          <table className="responsive-table min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3">Code</th>
@@ -405,18 +405,18 @@ export default function ProjectsPage() {
             <tbody>
               {filtered.map((project) => (
                 <tr key={project.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">{project.project_code || "N/A"}</td>
-                  <td className="px-4 py-3 font-medium">{project.name}</td>
-                  <td className="px-4 py-3">{project.company_name || "Interne"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label="Code">{project.project_code || "—"}</td>
+                  <td className="px-4 py-3 font-medium" data-label="Nom">{project.name}</td>
+                  <td className="px-4 py-3" data-label="Client">{project.company_name || "Interne"}</td>
+                  <td className="px-4 py-3" data-label="Statut">
                     <Badge status={project.status} label={STATUS_FR[project.status] || project.status} />
                   </td>
-                  <td className="px-4 py-3">{project.priority || "medium"}</td>
-                  <td className="px-4 py-3">{project.start_date || "N/A"}</td>
-                  <td className="px-4 py-3">{project.end_date || "N/A"}</td>
-                  <td className="px-4 py-3">{project.completion_percentage || 0}%</td>
-                  <td className="px-4 py-3">{formatCurrency(project.budget, project.currency)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label="Priorité">{project.priority || "medium"}</td>
+                  <td className="px-4 py-3" data-label="Début">{project.start_date || "—"}</td>
+                  <td className="px-4 py-3" data-label="Fin">{project.end_date || "—"}</td>
+                  <td className="px-4 py-3" data-label="Progression">{project.completion_percentage || 0}%</td>
+                  <td className="px-4 py-3" data-label="Budget">{formatCurrency(project.budget, project.currency)}</td>
+                  <td className="px-4 py-3" data-label="Actions">
                     <Button size="sm" variant="ghost" onClick={() => setSelectedProject(project)}>
                       Ouvrir
                     </Button>
@@ -444,7 +444,7 @@ export default function ProjectsPage() {
           <div className="mt-3 grid gap-2 md:grid-cols-3">
             <p className="text-sm text-indigo-800">
               <CalendarClock size={14} className="mr-1 inline" />
-              {selectedProject.start_date || "N/A"} → {selectedProject.end_date || "N/A"}
+              {selectedProject.start_date || "—"} → {selectedProject.end_date || "—"}
             </p>
             <p className="text-sm text-indigo-800">Budget: {formatCurrency(selectedProject.budget, selectedProject.currency)}</p>
             <p className="text-sm text-indigo-800">Progression: {selectedProject.completion_percentage || 0}%</p>
@@ -453,9 +453,9 @@ export default function ProjectsPage() {
       )}
 
       {createOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30">
-          <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
+        <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
+          <div className="modal-content modal-panel drawer absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl">
+            <div className="drawer-header mb-3 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Nouveau Projet</h2>
               <button onClick={() => setCreateOpen(false)}>
                 <X size={18} />

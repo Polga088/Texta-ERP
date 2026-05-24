@@ -134,7 +134,7 @@ function Column({
         </span>
       </header>
 
-      <div className="space-y-3">
+      <div className="kanban-cards-container flex flex-col gap-3 md:flex-col">
         {tasks.map((task) => (
           <TaskCard key={task.id} task={task} onOpenTask={onOpenTask} />
         ))}
@@ -143,10 +143,10 @@ function Column({
             Aucune tâche dans cette colonne
           </div>
         )}
-        <button className="kanban-add-card mt-2 w-full rounded-[var(--radius-md)] border-2 border-dashed border-[var(--color-slate-300)] p-3 text-center text-xs font-semibold text-[var(--color-slate-500)] transition hover:border-[var(--color-primary-400)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)]">
-          Ajouter une tâche
-        </button>
       </div>
+      <button className="kanban-add-card mt-2 w-full rounded-[var(--radius-md)] border-2 border-dashed border-[var(--color-slate-300)] p-3 text-center text-xs font-semibold text-[var(--color-slate-500)] transition hover:border-[var(--color-primary-400)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)]">
+        Ajouter une tâche
+      </button>
     </section>
   );
 }

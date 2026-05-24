@@ -221,16 +221,16 @@ function DroppableColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`min-h-[440px] rounded-2xl border p-3 transition ${STATUS_BG[status]} ${isOver ? "ring-2 ring-indigo-300" : ""}`}
+      className={`kanban-column min-h-[440px] rounded-2xl border p-3 transition ${STATUS_BG[status]} ${isOver ? "ring-2 ring-indigo-300" : ""}`}
     >
-      <header className="mb-3 flex items-center justify-between">
+      <header className="kanban-column-header mb-3 flex items-center justify-between">
         <Badge status={status} label={STATUS_LABELS[status]} />
         <span className="text-xs text-slate-500">{leads.length}</span>
       </header>
       {(status === "won" || status === "lost") && (
         <p className="mb-2 text-xs font-semibold text-slate-500">{formatMoney(total)}</p>
       )}
-      <div className="space-y-2">
+      <div className="kanban-cards-container space-y-2 md:space-y-2">
         {leads.map((lead) => (
           <DraggableLeadCard
             key={lead.id}
@@ -568,7 +568,7 @@ export default function LeadsPage() {
 
       {view === "kanban" ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-          <div className="grid gap-3 xl:grid-cols-5">
+          <div className="kanban-board grid gap-3 xl:grid-cols-5">
             {STATUS_ORDER.map((status) => (
               <DroppableColumn
                 key={status}
@@ -583,7 +583,7 @@ export default function LeadsPage() {
         </DndContext>
       ) : (
         <Card className="overflow-x-auto p-0">
-          <table className="min-w-full text-sm">
+          <table className="responsive-table min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3">Opportunité</th>
@@ -599,16 +599,16 @@ export default function LeadsPage() {
             <tbody>
               {filtered.slice(0, 20).map((lead) => (
                 <tr key={lead.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3 font-medium">{lead.title}</td>
-                  <td className="px-4 py-3">{lead.contact_name || "N/A"}</td>
-                  <td className="px-4 py-3">{lead.company_name || "N/A"}</td>
-                  <td className="px-4 py-3">{formatMoney(lead.deal_value, lead.currency)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 font-medium" data-label="Opportunité">{lead.title}</td>
+                  <td className="px-4 py-3" data-label="Contact">{lead.contact_name || "—"}</td>
+                  <td className="px-4 py-3" data-label="Entreprise">{lead.company_name || "—"}</td>
+                  <td className="px-4 py-3" data-label="Montant">{formatMoney(lead.deal_value, lead.currency)}</td>
+                  <td className="px-4 py-3" data-label="Statut">
                     <Badge status={lead.status} label={STATUS_LABELS[lead.status]} />
                   </td>
-                  <td className="px-4 py-3">{lead.priority || "medium"}</td>
-                  <td className="px-4 py-3">{lead.expected_close_date || "N/A"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" data-label="Priorité">{lead.priority || "medium"}</td>
+                  <td className="px-4 py-3" data-label="Échéance">{lead.expected_close_date || "—"}</td>
+                  <td className="px-4 py-3" data-label="Actions">
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setDrawerLead(lead)}>
                         Détail
@@ -626,9 +626,9 @@ export default function LeadsPage() {
       )}
 
       {createOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30">
-          <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
+        <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
+          <div className="modal-content modal-panel drawer absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white p-5 shadow-2xl">
+            <div className="drawer-header mb-3 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Nouveau Lead</h2>
               <button onClick={() => setCreateOpen(false)}>
                 <X size={18} />
@@ -726,9 +726,9 @@ export default function LeadsPage() {
       )}
 
       {drawerLead && (
-        <div className="fixed inset-0 z-50 bg-slate-900/30">
-          <div className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
+        <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[4px]">
+          <div className="modal-content modal-panel drawer absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl">
+            <div className="drawer-header mb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">{drawerLead.title}</h2>
                 <Badge status={drawerLead.status} label={STATUS_LABELS[drawerLead.status]} />
@@ -750,11 +750,11 @@ export default function LeadsPage() {
             </div>
             {drawerTab === "info" && (
               <div className="space-y-2 text-sm">
-                <p><span className="font-semibold">Contact:</span> {drawerLead.contact_name || "N/A"}</p>
-                <p><span className="font-semibold">Email:</span> {drawerLead.contact_email || "N/A"}</p>
-                <p><span className="font-semibold">Entreprise:</span> {drawerLead.company_name || "N/A"}</p>
+                <p><span className="font-semibold">Contact:</span> {drawerLead.contact_name || "—"}</p>
+                <p><span className="font-semibold">Email:</span> {drawerLead.contact_email || "—"}</p>
+                <p><span className="font-semibold">Entreprise:</span> {drawerLead.company_name || "—"}</p>
                 <p><span className="font-semibold">Montant:</span> {formatMoney(drawerLead.deal_value, drawerLead.currency)}</p>
-                <p><span className="font-semibold">Échéance:</span> {drawerLead.expected_close_date || "N/A"}</p>
+                <p><span className="font-semibold">Échéance:</span> {drawerLead.expected_close_date || "—"}</p>
                 <p><span className="font-semibold">Prochaine action:</span> {drawerLead.next_action_type || "none"} {drawerLead.next_action_date || ""}</p>
                 <p><span className="font-semibold">Description:</span> {drawerLead.description || "Aucune"}</p>
               </div>
@@ -764,7 +764,7 @@ export default function LeadsPage() {
                 <li>
                   Lead créé le {new Date(drawerLead.created_at || new Date().toISOString()).toLocaleString("fr-FR")}.
                 </li>
-                <li>Dernière activité le {drawerLead.last_activity ? new Date(drawerLead.last_activity).toLocaleString("fr-FR") : "N/A"}.</li>
+                <li>Dernière activité le {drawerLead.last_activity ? new Date(drawerLead.last_activity).toLocaleString("fr-FR") : "—"}.</li>
                 <li>Statut actuel: {STATUS_LABELS[drawerLead.status]}.</li>
               </ul>
             )}
