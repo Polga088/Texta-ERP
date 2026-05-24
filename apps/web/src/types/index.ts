@@ -119,13 +119,48 @@ export interface Group {
 
 export interface Lead {
   id: string;
+  created_at?: string;
+  updated_at?: string;
   title: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  company_name?: string;
+  company_website?: string;
+  contact_job_title?: string;
   source?: string;
   status: "new" | "qualified" | "proposal" | "won" | "lost";
+  deal_value?: number;
+  currency?: "MAD" | "EUR" | "USD";
+  product_service?: string;
   estimated_value?: number;
   expected_close_date?: string;
+  conversion_probability?: number;
+  priority?: "high" | "medium" | "low";
+  marketing_campaign?: string;
   owner_id?: string;
+  assigned_to?: string;
+  last_activity?: string;
+  next_action_type?: "call" | "email" | "meeting" | "quote" | "follow_up" | "none";
+  next_action_date?: string;
+  next_action_note?: string;
+  description?: string;
+  tags?: string[];
+  attachments?: string[];
+  lost_reason?: "price_too_high" | "wrong_timing" | "competitor" | "no_budget" | "internal_decision" | "other";
+  lost_competitor?: string;
   notes?: string;
+}
+
+export interface LeadKpis {
+  new_count: number;
+  pipeline_count: number;
+  won_count: number;
+  lost_count: number;
+  conversion_rate: number;
+  pipeline_value: number;
+  won_value: number;
+  lost_value: number;
 }
 
 export interface ChatMessage {

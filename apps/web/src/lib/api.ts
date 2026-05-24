@@ -121,6 +121,10 @@ export async function api<T>(
     throw new ApiError(res.status, message || "Erreur API");
   }
   if (res.status === 204) return undefined as T;
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("text/csv") || contentType.startsWith("text/")) {
+    return (await res.text()) as T;
+  }
   return res.json();
 }
 
