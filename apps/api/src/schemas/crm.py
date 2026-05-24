@@ -12,7 +12,11 @@ from src.models.crm import (
     LeadNextActionType,
     LeadPriority,
     LeadStatus,
+    ProjectHealthStatus,
+    ProjectPriority,
     ProjectStatus,
+    ProjectType,
+    ProjectVisibility,
 )
 from src.schemas.common import BaseSchema, TimestampSchema
 
@@ -54,21 +58,35 @@ class ContactResponse(TimestampSchema):
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1)
     account_id: UUID | None = None
+    client_lead_id: UUID | None = None
     description: str | None = None
-    status: ProjectStatus = ProjectStatus.LEAD
+    project_type: ProjectType = ProjectType.INTERNAL
+    category: str | None = None
+    status: ProjectStatus = ProjectStatus.DRAFT
     budget: Decimal | None = None
+    budget_alert_threshold: int = Field(default=80, ge=50, le=95)
+    currency: str = "MAD"
+    hourly_rate: Decimal | None = None
     start_date: date | None = None
     end_date: date | None = None
+    project_manager_id: UUID | None = None
+    team_members: list[dict] = Field(default_factory=list)
+    priority: ProjectPriority = ProjectPriority.MEDIUM
+    tags: list[str] = Field(default_factory=list)
+    visibility: ProjectVisibility = ProjectVisibility.PRIVATE
+    deliverables: list[dict] = Field(default_factory=list)
+    project_documents: list[str] = Field(default_factory=list)
+    notes: str | None = None
     owner_id: UUID | None = None
     company_name: str | None = None
     company_logo_url: str | None = None
     project_code: str | None = None
-    scope_statement: str = Field(min_length=20)
-    iso_context: str = Field(min_length=20)
-    iso_risk_register: str = Field(min_length=20)
-    iso_objectives: str = Field(min_length=20)
-    iso_kpis: str = Field(min_length=20)
-    iso_acceptance_criteria: str = Field(min_length=20)
+    scope_statement: str | None = None
+    iso_context: str | None = None
+    iso_risk_register: str | None = None
+    iso_objectives: str | None = None
+    iso_kpis: str | None = None
+    iso_acceptance_criteria: str | None = None
     iso_document_control: bool = True
     iso_change_control: bool = True
 
@@ -76,11 +94,27 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     name: str | None = None
     account_id: UUID | None = None
+    client_lead_id: UUID | None = None
     description: str | None = None
+    project_type: ProjectType | None = None
+    category: str | None = None
     status: ProjectStatus | None = None
     budget: Decimal | None = None
+    budget_alert_threshold: int | None = Field(default=None, ge=50, le=95)
+    currency: str | None = None
+    hourly_rate: Decimal | None = None
     start_date: date | None = None
     end_date: date | None = None
+    project_manager_id: UUID | None = None
+    team_members: list[dict] | None = None
+    priority: ProjectPriority | None = None
+    tags: list[str] | None = None
+    visibility: ProjectVisibility | None = None
+    deliverables: list[dict] | None = None
+    project_documents: list[str] | None = None
+    notes: str | None = None
+    pause_reason: str | None = None
+    cancel_reason: str | None = None
     owner_id: UUID | None = None
     company_name: str | None = None
     company_logo_url: str | None = None
@@ -103,12 +137,36 @@ class ProjectResponse(TimestampSchema):
     id: UUID
     name: str
     description: str | None
+    project_type: ProjectType
+    category: str | None
     status: ProjectStatus
+    client_lead_id: UUID | None
     budget: Decimal | None
+    budget_consumed: Decimal
+    budget_remaining: Decimal
+    budget_alert_threshold: int
+    currency: str
+    hourly_rate: Decimal | None
     start_date: date | None
     end_date: date | None
+    actual_start_date: date | None
+    actual_end_date: date | None
+    duration_days: int | None
+    delay_days: int | None
     account_id: UUID | None
     owner_id: UUID | None
+    project_manager_id: UUID | None
+    team_members: list[dict]
+    priority: ProjectPriority
+    tags: list[str]
+    visibility: ProjectVisibility
+    deliverables: list[dict]
+    project_documents: list[str]
+    notes: str | None
+    completion_percentage: int
+    health_status: ProjectHealthStatus
+    pause_reason: str | None
+    cancel_reason: str | None
     organization_id: UUID
     company_name: str | None
     company_logo_url: str | None

@@ -8,11 +8,61 @@ export interface User {
 
 export interface Project {
   id: string;
+  created_at?: string;
+  updated_at?: string;
   name: string;
   description?: string;
-  status: string;
+  status:
+    | "draft"
+    | "planning"
+    | "in_progress"
+    | "on_hold"
+    | "in_review"
+    | "done"
+    | "cancelled"
+    | "lead"
+    | "active"
+    | "completed";
+  project_type?: "internal" | "client" | "partnership" | "rnd" | "marketing" | "event";
+  category?: string;
   owner_id?: string;
+  client_lead_id?: string;
+  project_manager_id?: string;
   account_id?: string;
+  start_date?: string;
+  end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  duration_days?: number;
+  delay_days?: number;
+  budget?: number;
+  budget_consumed?: number;
+  budget_remaining?: number;
+  budget_alert_threshold?: number;
+  currency?: string;
+  hourly_rate?: number;
+  team_members?: Array<{
+    user_id: string;
+    role: string;
+    allocation_percentage: number;
+    joined_at?: string;
+  }>;
+  priority?: "critical" | "high" | "medium" | "low";
+  tags?: string[];
+  visibility?: "public" | "private" | "restricted";
+  deliverables?: Array<{
+    name: string;
+    description?: string;
+    due_date?: string;
+    status?: string;
+    attachments?: string[];
+  }>;
+  project_documents?: string[];
+  notes?: string;
+  completion_percentage?: number;
+  health_status?: "good" | "watch" | "danger" | "not_evaluated";
+  pause_reason?: string;
+  cancel_reason?: string;
   company_name?: string;
   company_logo_url?: string;
   project_code?: string;
@@ -24,6 +74,18 @@ export interface Project {
   iso_acceptance_criteria?: string;
   iso_document_control?: boolean;
   iso_change_control?: boolean;
+}
+
+export interface ProjectKpis {
+  active_count: number;
+  completed_count: number;
+  completed_percent: number;
+  delayed_count: number;
+  paused_count: number;
+  completion_avg: number;
+  budget_consumed_percent: number;
+  hours_month: number;
+  risk_count: number;
 }
 
 export interface Task {

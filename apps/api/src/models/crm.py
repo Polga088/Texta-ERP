@@ -15,11 +15,46 @@ from src.models.base import TimestampMixin, uuid_pk
 
 
 class ProjectStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PLANNING = "planning"
+    IN_PROGRESS = "in_progress"
+    IN_REVIEW = "in_review"
+    DONE = "done"
+    # Legacy statuses kept for compatibility
     LEAD = "lead"
     ACTIVE = "active"
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+
+class ProjectType(str, enum.Enum):
+    INTERNAL = "internal"
+    CLIENT = "client"
+    PARTNERSHIP = "partnership"
+    RND = "rnd"
+    MARKETING = "marketing"
+    EVENT = "event"
+
+
+class ProjectPriority(str, enum.Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class ProjectVisibility(str, enum.Enum):
+    PUBLIC = "public"
+    PRIVATE = "private"
+    RESTRICTED = "restricted"
+
+
+class ProjectHealthStatus(str, enum.Enum):
+    GOOD = "good"
+    WATCH = "watch"
+    DANGER = "danger"
+    NOT_EVALUATED = "not_evaluated"
 
 
 class Account(Base, TimestampMixin):
@@ -66,19 +101,63 @@ class Project(Base, TimestampMixin):
     account_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True
     )
+    client_lead_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leads.id", ondelete="SET NULL"), nullable=True
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[ProjectStatus] = mapped_column(
         Enum(ProjectStatus, name="project_status", values_callable=lambda x: [e.value for e in x]),
-        default=ProjectStatus.LEAD,
+        default=ProjectStatus.DRAFT,
         nullable=False,
     )
+    project_type: Mapped[ProjectType] = mapped_column(
+        Enum(ProjectType, name="project_type", values_callable=lambda x: [e.value for e in x]),
+        default=ProjectType.INTERNAL,
+        nullable=False,
+    )
+    category: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     budget: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2), nullable=True)
+    budget_consumed: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
+    budget_remaining: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
+    budget_alert_threshold: Mapped[int] = mapped_column(Integer, default=80, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="MAD", nullable=False)
+    hourly_rate: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    actual_start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    actual_end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    duration_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    delay_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    project_manager_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    team_members: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
+    priority: Mapped[ProjectPriority] = mapped_column(
+        Enum(ProjectPriority, name="project_priority", values_callable=lambda x: [e.value for e in x]),
+        default=ProjectPriority.MEDIUM,
+        nullable=False,
+    )
+    tags: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    visibility: Mapped[ProjectVisibility] = mapped_column(
+        Enum(ProjectVisibility, name="project_visibility", values_callable=lambda x: [e.value for e in x]),
+        default=ProjectVisibility.PRIVATE,
+        nullable=False,
+    )
+    deliverables: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
+    project_documents: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    completion_percentage: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    health_status: Mapped[ProjectHealthStatus] = mapped_column(
+        Enum(ProjectHealthStatus, name="project_health_status", values_callable=lambda x: [e.value for e in x]),
+        default=ProjectHealthStatus.NOT_EVALUATED,
+        nullable=False,
+    )
+    pause_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cancel_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     company_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     company_logo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     project_code: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
