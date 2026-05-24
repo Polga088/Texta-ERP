@@ -90,14 +90,61 @@ export interface ProjectKpis {
 
 export interface Task {
   id: string;
+  created_at?: string;
+  updated_at?: string;
   title: string;
+  task_code?: string;
   description?: string;
-  status: string;
-  priority: string;
+  status: "todo" | "in_progress" | "in_review" | "done" | "blocked";
+  priority: "critical" | "urgent" | "high" | "medium" | "low";
   project_id?: string;
+  parent_id?: string;
   assignee_id?: string;
+  reviewer_id?: string;
+  start_date?: string;
   position: number;
   due_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  duration_days?: number;
+  delay_days?: number;
+  completion_percentage?: number;
+  estimated_hours?: number;
+  actual_hours?: number;
+  billable?: boolean;
+  hourly_rate?: number;
+  tags?: string[];
+  category?: string;
+  milestone?: string;
+  attachments?: string[];
+  comments?: Array<{
+    author_id: string;
+    author_name?: string;
+    content: string;
+    attachments?: string[];
+    created_at: string;
+  }>;
+  checklist?: Array<{
+    label: string;
+    completed: boolean;
+    completed_at?: string;
+  }>;
+  block_reason?: string;
+  blocked_since?: string;
+  blocked_by?: string;
+  unblocked_at?: string;
+  unblock_note?: string;
+}
+
+export interface TaskKpis {
+  total: number;
+  todo: number;
+  in_progress: number;
+  done: number;
+  blocked: number;
+  estimated_hours: number;
+  actual_hours: number;
+  variance_percent: number;
 }
 
 export interface Account {
