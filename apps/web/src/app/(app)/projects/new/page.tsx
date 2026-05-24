@@ -1,31 +1,61 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { buildProjectPrefillFromLead } from "@/lib/lead-brief";
+
+const INITIAL_FORM = {
+  name: "",
+  description: "",
+  company_name: "",
+  company_logo_url: "",
+  project_code: "",
+  scope_statement: "",
+  iso_context: "",
+  iso_risk_register: "",
+  iso_objectives: "",
+  iso_kpis: "",
+  iso_acceptance_criteria: "",
+  iso_document_control: true,
+  iso_change_control: true,
+};
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    company_name: "",
-    company_logo_url: "",
-    project_code: "",
-    scope_statement: "",
-    iso_context: "",
-    iso_risk_register: "",
-    iso_objectives: "",
-    iso_kpis: "",
-    iso_acceptance_criteria: "",
-    iso_document_control: true,
-    iso_change_control: true,
-  });
+  const [prefilledFromLead, setPrefilledFromLead] = useState<string | null>(null);
+  const [form, setForm] = useState(INITIAL_FORM);
+
+  useEffect(() => {
+    const fromLead = searchParams.get("fromLead");
+    if (!fromLead || typeof window === "undefined") return;
+
+    const raw = window.sessionStorage.getItem("texta_lead_project_prefill");
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw) as {
+        id: string;
+        title: string;
+        source?: string;
+        notes?: string;
+      };
+      if (data.id !== fromLead) return;
+      const prefill = buildProjectPrefillFromLead(data.title, data.source, data.notes);
+      setForm((prev) => ({
+        ...prev,
+        ...prefill,
+      }));
+      setPrefilledFromLead(data.title);
+    } catch {
+      // ignore malformed prefill payload
+    }
+  }, [searchParams]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +81,11 @@ export default function NewProjectPage() {
         <p className="mt-1 text-sm text-slate-500">
           Définissez les informations société et le profil conformité ISO (processus complet).
         </p>
+        {prefilledFromLead && (
+          <p className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+            Formulaire prérempli depuis le lead: <span className="font-semibold">{prefilledFromLead}</span>
+          </p>
+        )}
       </div>
 
       <Card>

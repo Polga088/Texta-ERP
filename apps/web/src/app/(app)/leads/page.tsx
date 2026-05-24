@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Pencil, Trophy, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Lead } from "@/types";
@@ -8,6 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  LeadBrief,
+  emptyLeadBrief,
+  parseLeadNotes,
+  serializeLeadNotes,
+} from "@/lib/lead-brief";
 
 const STATUS_LABELS: Record<Lead["status"], string> = {
   new: "Nouveau",
@@ -19,7 +26,110 @@ const STATUS_LABELS: Record<Lead["status"], string> = {
 
 const WORKFLOW: Lead["status"][] = ["new", "qualified", "proposal", "won"];
 
+const BRIEF_SECTIONS = [
+  {
+    title: "1. Identité du projet",
+    fields: [
+      { key: "identity_project_name", label: "Nom du projet", placeholder: "OmJep Platform" },
+      { key: "identity_baseline", label: "Slogan / baseline", placeholder: "La compétition EA FC 26, réinventée" },
+      { key: "identity_description_short", label: "Description en 1 phrase" },
+      { key: "identity_description_long", label: "Description détaillée" },
+      { key: "identity_sector", label: "Secteur d'activité", placeholder: "Gaming / E-sport" },
+      { key: "identity_launch_date", label: "Date de lancement visée", placeholder: "Juillet 2026" },
+      { key: "identity_budget", label: "Budget estimé", placeholder: "50 000 - 100 000 MAD" },
+    ],
+  },
+  {
+    title: "2. Objectifs & enjeux",
+    fields: [
+      { key: "objectives_main", label: "Objectif principal" },
+      { key: "objectives_secondary", label: "Objectifs secondaires" },
+      { key: "objectives_problem", label: "Problème résolu" },
+      { key: "objectives_kpis", label: "KPIs de succès" },
+      { key: "objectives_duration", label: "Durée du projet" },
+    ],
+  },
+  {
+    title: "3. Cible & utilisateurs",
+    fields: [
+      { key: "target_primary_user", label: "Utilisateur principal" },
+      { key: "target_secondary_user", label: "Utilisateur secondaire" },
+      { key: "target_persona", label: "Persona" },
+      { key: "target_needs", label: "Besoins utilisateurs" },
+      { key: "target_frustrations", label: "Frustrations actuelles" },
+      { key: "target_languages", label: "Langues supportées", placeholder: "FR / AR / EN" },
+    ],
+  },
+  {
+    title: "4. Fonctionnalités & périmètre",
+    fields: [
+      { key: "features_mvp", label: "Fonctionnalités MVP" },
+      { key: "features_v2", label: "Fonctionnalités V2" },
+      { key: "features_v3", label: "Fonctionnalités V3+" },
+      { key: "features_pages", label: "Pages / écrans nécessaires" },
+      { key: "features_roles", label: "Rôles & permissions" },
+      { key: "features_flows", label: "Flux utilisateurs clés" },
+    ],
+  },
+  {
+    title: "5. Design & expérience",
+    fields: [
+      { key: "design_tone", label: "Tone & voice" },
+      { key: "design_direction", label: "Direction visuelle" },
+      { key: "design_colors", label: "Palette de couleurs" },
+      { key: "design_typography", label: "Typographie" },
+      { key: "design_theme_mode", label: "Mode sombre / clair" },
+      { key: "design_references", label: "Références visuelles" },
+      { key: "design_logo_assets", label: "Logo & assets" },
+      { key: "design_responsive", label: "Responsive", placeholder: "Desktop / Mobile / Les deux" },
+    ],
+  },
+  {
+    title: "6. Contenu & données",
+    fields: [
+      { key: "content_existing", label: "Contenu existant" },
+      { key: "content_to_create", label: "Contenu à créer" },
+      { key: "content_database", label: "Base de données" },
+      { key: "content_sources", label: "Sources de données externes" },
+      { key: "content_privacy", label: "RGPD / confidentialité" },
+    ],
+  },
+  {
+    title: "7. Technique & infrastructure",
+    fields: [
+      { key: "tech_platform_type", label: "Type de plateforme" },
+      { key: "tech_stack", label: "Tech stack" },
+      { key: "tech_hosting", label: "Hébergement" },
+      { key: "tech_domain", label: "Nom de domaine" },
+      { key: "tech_security", label: "Sécurité" },
+      { key: "tech_integrations", label: "Intégrations tierces" },
+      { key: "tech_seo", label: "SEO & référencement" },
+    ],
+  },
+  {
+    title: "8. Gestion & livraison",
+    fields: [
+      { key: "delivery_team", label: "Équipe projet" },
+      { key: "delivery_method", label: "Méthodologie" },
+      { key: "delivery_phases", label: "Phases de livraison" },
+      { key: "delivery_tools", label: "Outils de collaboration" },
+      { key: "delivery_tests", label: "Recette & tests" },
+      { key: "delivery_maintenance", label: "Maintenance post-launch" },
+    ],
+  },
+  {
+    title: "9. Monétisation & business model",
+    fields: [
+      { key: "business_model", label: "Modèle économique" },
+      { key: "business_pricing", label: "Tarification" },
+      { key: "business_payment", label: "Passerelles de paiement" },
+      { key: "business_legal", label: "Conditions générales" },
+    ],
+  },
+] as const;
+
 export default function LeadsPage() {
+  const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
@@ -30,14 +140,25 @@ export default function LeadsPage() {
     source: "",
     status: "new" as Lead["status"],
     estimated_value: "",
-    notes: "",
   });
+  const [editBrief, setEditBrief] = useState<LeadBrief>(emptyLeadBrief());
+  const [editPlainNotes, setEditPlainNotes] = useState("");
+  const [activeSection, setActiveSection] = useState(0);
 
-  const load = () => api<Lead[]>("/leads").then(setLeads).catch(console.error);
+  const load = () =>
+    api<Lead[]>("/leads")
+      .then(setLeads)
+      .catch((err) => setError(err instanceof Error ? err.message : "Erreur de chargement"));
 
   useEffect(() => {
     load();
   }, []);
+
+  const briefCoverage = useMemo(() => {
+    const total = Object.keys(editBrief).length;
+    const filled = Object.values(editBrief).filter((value) => value.trim().length > 0).length;
+    return total === 0 ? 0 : Math.round((filled / total) * 100);
+  }, [editBrief]);
 
   const createLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,19 +191,24 @@ export default function LeadsPage() {
   };
 
   const beginEdit = (lead: Lead) => {
+    const parsed = parseLeadNotes(lead.notes);
     setEditingLeadId(lead.id);
     setEditForm({
       title: lead.title,
       source: lead.source || "",
       status: lead.status,
       estimated_value: lead.estimated_value ? String(lead.estimated_value) : "",
-      notes: lead.notes || "",
     });
+    setEditBrief(parsed.brief);
+    setEditPlainNotes(parsed.plainNotes);
+    setActiveSection(0);
   };
 
   const cancelEdit = () => {
     setEditingLeadId(null);
-    setEditForm({ title: "", source: "", status: "new", estimated_value: "", notes: "" });
+    setEditForm({ title: "", source: "", status: "new", estimated_value: "" });
+    setEditBrief(emptyLeadBrief());
+    setEditPlainNotes("");
   };
 
   const saveLead = async () => {
@@ -95,7 +221,7 @@ export default function LeadsPage() {
           source: editForm.source || null,
           status: editForm.status,
           estimated_value: editForm.estimated_value ? Number(editForm.estimated_value) : null,
-          notes: editForm.notes || null,
+          notes: serializeLeadNotes(editBrief, editPlainNotes),
         }),
       });
       setError("");
@@ -121,6 +247,20 @@ export default function LeadsPage() {
     if (active === 0) return 0;
     return Math.round((grouped.won.length / active) * 100);
   }, [grouped.won.length, leads]);
+
+  const convertLeadToProject = (lead: Lead) => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(
+      "texta_lead_project_prefill",
+      JSON.stringify({
+        id: lead.id,
+        title: lead.title,
+        source: lead.source || "",
+        notes: lead.notes || "",
+      }),
+    );
+    router.push(`/projects/new?fromLead=${lead.id}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -219,10 +359,52 @@ export default function LeadsPage() {
                           placeholder="Valeur €"
                         />
                       </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          {BRIEF_SECTIONS.map((section, idx) => (
+                            <button
+                              key={section.title}
+                              className={`rounded-lg px-2 py-1 text-xs ${
+                                idx === activeSection
+                                  ? "bg-indigo-600 text-white"
+                                  : "bg-white text-slate-600 hover:bg-slate-100"
+                              }`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setActiveSection(idx);
+                              }}
+                            >
+                              {idx + 1}
+                            </button>
+                          ))}
+                          <span className="ml-auto rounded-lg bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+                            Brief rempli à {briefCoverage}%
+                          </span>
+                        </div>
+                        <p className="mb-2 text-xs font-semibold text-slate-700">{BRIEF_SECTIONS[activeSection].title}</p>
+                        <div className="grid gap-2">
+                          {BRIEF_SECTIONS[activeSection].fields.map((field) => (
+                            <label key={field.key} className="text-xs text-slate-600">
+                              {field.label}
+                              <textarea
+                                value={editBrief[field.key] || ""}
+                                onChange={(e) =>
+                                  setEditBrief((prev) => ({
+                                    ...prev,
+                                    [field.key]: e.target.value,
+                                  }))
+                                }
+                                placeholder={field.placeholder || ""}
+                                className="mt-1 min-h-16 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                       <textarea
-                        value={editForm.notes}
-                        onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))}
-                        placeholder="Notes"
+                        value={editPlainNotes}
+                        onChange={(e) => setEditPlainNotes(e.target.value)}
+                        placeholder="Notes internes complémentaires"
                         className="min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                       />
                       <div className="flex gap-2">
@@ -237,10 +419,19 @@ export default function LeadsPage() {
                     </div>
                   ) : (
                     <>
+                      {(() => {
+                        const parsedBrief = parseLeadNotes(lead.notes).brief;
+                        return (
+                          <>
                       <p className="text-sm font-semibold text-slate-800">{lead.title}</p>
                       <p className="mt-1 text-xs text-slate-500">
                         {lead.source || "Source non renseignée"}
                         {lead.estimated_value ? ` · ${lead.estimated_value} €` : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-indigo-600">
+                        {parsedBrief.identity_project_name
+                          ? `Projet: ${parsedBrief.identity_project_name}`
+                          : "Template projet non encore rempli"}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {lead.status !== "won" && lead.status !== "lost" && (
@@ -261,7 +452,13 @@ export default function LeadsPage() {
                           <Pencil size={14} />
                           Éditer
                         </Button>
+                        <Button size="sm" onClick={() => convertLeadToProject(lead)}>
+                          Convertir en projet
+                        </Button>
                       </div>
+                          </>
+                        );
+                      })()}
                     </>
                   )}
                 </article>
