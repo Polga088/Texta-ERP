@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -26,14 +26,15 @@ const INITIAL_FORM = {
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [prefilledFromLead, setPrefilledFromLead] = useState<string | null>(null);
   const [form, setForm] = useState(INITIAL_FORM);
 
   useEffect(() => {
-    const fromLead = searchParams.get("fromLead");
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const fromLead = url.searchParams.get("fromLead");
     if (!fromLead || typeof window === "undefined") return;
 
     const raw = window.sessionStorage.getItem("texta_lead_project_prefill");
@@ -55,7 +56,7 @@ export default function NewProjectPage() {
     } catch {
       // ignore malformed prefill payload
     }
-  }, [searchParams]);
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

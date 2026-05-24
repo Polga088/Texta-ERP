@@ -394,7 +394,7 @@ export default function LeadsPage() {
                                     [field.key]: e.target.value,
                                   }))
                                 }
-                                placeholder={field.placeholder || ""}
+                                placeholder={"placeholder" in field ? field.placeholder : ""}
                                 className="mt-1 min-h-16 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                               />
                             </label>
