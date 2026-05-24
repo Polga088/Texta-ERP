@@ -202,6 +202,125 @@ export interface DashboardStats {
   accounts_total: number;
 }
 
+export interface DashboardKpiValue {
+  value: number;
+  variation: number;
+}
+
+export interface DashboardOverview {
+  kpis: {
+    pipeline_revenue: DashboardKpiValue;
+    won_revenue: DashboardKpiValue;
+    conversion_rate: DashboardKpiValue;
+    active_projects: DashboardKpiValue;
+    delayed_projects: DashboardKpiValue;
+    logged_hours: DashboardKpiValue;
+    completed_tasks: DashboardKpiValue;
+    blocked_tasks: DashboardKpiValue;
+  };
+  pipeline_chart: Array<{
+    period: string;
+    new: number;
+    qualified: number;
+    proposal: number;
+    won: number;
+    lost: number;
+  }>;
+  projects_chart: Array<{
+    period: string;
+    created: number;
+    completed: number;
+    delayed: number;
+  }>;
+  team_load: Array<{
+    member_id: string;
+    member_name: string;
+    week: string;
+    load_percent: number;
+  }>;
+  top_opportunities: Array<{
+    id: string;
+    title: string;
+    deal_value: number;
+    owner_name: string;
+    expected_close_date?: string;
+    status: string;
+  }>;
+  risky_projects: Array<{
+    id: string;
+    name: string;
+    delay_days: number;
+    budget_percent: number;
+    manager_name: string;
+    health_status: string;
+  }>;
+  urgent_tasks: Array<{
+    id: string;
+    title: string;
+    due_date?: string;
+    assignee_name: string;
+    project_name: string;
+    priority: string;
+    status: string;
+  }>;
+  activity: Array<{
+    id: string;
+    text: string;
+    created_at: string;
+    level: string;
+  }>;
+  alerts: Array<{
+    code: string;
+    label: string;
+    count: number;
+    severity: string;
+  }>;
+}
+
+export interface DashboardReports {
+  commercial_performance: Array<{
+    user_name: string;
+    leads_created: number;
+    leads_won: number;
+    won_revenue: number;
+    conversion_rate: number;
+    avg_cycle_days: number;
+  }>;
+  project_status: Array<{
+    project_name: string;
+    client_name: string;
+    budget_total: number;
+    budget_consumed: number;
+    budget_percent: number;
+    delay_days: number;
+    health_status: string;
+    team_size: number;
+  }>;
+  team_productivity: Array<{
+    member_name: string;
+    estimated_hours: number;
+    actual_hours: number;
+    variance_percent: number;
+    tasks_done: number;
+    tasks_late: number;
+  }>;
+  profitability: Array<{
+    project_name: string;
+    revenue: number;
+    cost: number;
+    margin: number;
+    margin_percent: number;
+    profitable: boolean;
+  }>;
+  clients: Array<{
+    client_name: string;
+    projects_count: number;
+    revenue: number;
+    last_contact?: string;
+    status: string;
+  }>;
+}
+
 export interface Grant {
   id: string;
   project_id: string;
