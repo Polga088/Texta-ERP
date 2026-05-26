@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Invoice, Payment } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,12 @@ export function PaymentModal({
     const numericAmount = Number(amount || "0");
     if (numericAmount <= 0) {
       setError("Montant invalide");
+      toast.error("Montant invalide");
       return;
     }
     if (numericAmount > Number(invoice.balance_due || 0)) {
       setError("Le montant ne peut pas depasser le solde restant");
+      toast.error("Le montant ne peut pas dépasser le solde restant");
       return;
     }
     try {
@@ -51,9 +54,12 @@ export function PaymentModal({
         }),
       });
       onCreated(payment);
+      toast.success(`Paiement de ${numericAmount.toLocaleString("fr-MA")} MAD enregistré`);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur paiement");
+      const message = err instanceof Error ? err.message : "Erreur paiement";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }

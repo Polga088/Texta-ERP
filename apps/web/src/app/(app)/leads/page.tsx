@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { buildProjectPrefillFromLead } from "@/lib/lead-brief";
 
 type LeadStatus = Lead["status"];
@@ -258,6 +259,7 @@ export default function LeadsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
   const [view, setView] = useState<LeadView>("kanban");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
@@ -431,7 +433,6 @@ export default function LeadsPage() {
   };
 
   const deleteLead = async (leadId: string) => {
-    if (!window.confirm("Supprimer ce lead ?")) return;
     await api(`/leads/${leadId}`, { method: "DELETE" });
     setDrawerLead(null);
     setToast("Lead supprimé");
@@ -792,7 +793,7 @@ export default function LeadsPage() {
               <Button size="sm" variant="secondary" onClick={() => convertLeadToProject(drawerLead)}>
                 Convertir en projet
               </Button>
-              <Button size="sm" variant="danger" onClick={() => deleteLead(drawerLead.id)}>
+              <Button size="sm" variant="danger" onClick={() => setLeadToDelete(drawerLead.id)}>
                 Supprimer
               </Button>
               <div className="ml-auto">
@@ -818,6 +819,20 @@ export default function LeadsPage() {
           {toast}
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!leadToDelete}
+        title="Supprimer ce lead ?"
+        description="Cette action est définitive et supprimera le lead."
+        confirmLabel="Supprimer"
+        variant="danger"
+        onCancel={() => setLeadToDelete(null)}
+        onConfirm={() => {
+          if (leadToDelete) {
+            void deleteLead(leadToDelete);
+          }
+          setLeadToDelete(null);
+        }}
+      />
       {error && <p className="text-sm text-rose-600">{error}</p>}
     </div>
   );

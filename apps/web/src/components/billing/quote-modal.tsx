@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Eye, FileText, ListOrdered, Save, Send, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Account, Lead, ProductCatalogItem, Project, Quote } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -34,12 +36,16 @@ export function QuoteModal({
   onClose,
   onCreated,
   initialLead,
+  quoteId,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (quote: Quote) => void;
   initialLead?: Lead | null;
+  quoteId?: string;
 }) {
+  const router = useRouter();
+  const isEditMode = Boolean(quoteId);
   const [step, setStep] = useState<QuoteStep>("client");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -56,6 +62,7 @@ export function QuoteModal({
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editingNumber, setEditingNumber] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -69,6 +76,34 @@ export function QuoteModal({
         setProjects([]);
       });
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !quoteId) return;
+    api<Quote>(`/billing/quotes/${quoteId}`)
+      .then((quote) => {
+        setEditingNumber(quote.quote_number);
+        setSelectedClientId(quote.client_id || "");
+        setIssueDate(quote.issue_date);
+        setValidUntil(quote.valid_until);
+        setNotes(quote.notes || "");
+        setTvaRate(Number(quote.tva_rate || 20));
+        setLines(
+          (quote.items || []).map((item) => ({
+            id: crypto.randomUUID(),
+            product_id: item.product_id,
+            description: item.description || "",
+            qty: Number(item.qty || 1),
+            unit_price: Number(item.unit_price || 0),
+            discount_percent: Number(item.discount_percent || 0),
+          })),
+        );
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Erreur chargement devis";
+        setError(message);
+        toast.error(message);
+      });
+  }, [open, quoteId]);
 
   useEffect(() => {
     if (!open) return;
@@ -155,35 +190,50 @@ export function QuoteModal({
     try {
       setSaving(true);
       setError("");
-      const created = await api<Quote>("/billing/quotes", {
-        method: "POST",
-        body: JSON.stringify({
-          lead_id: initialLead?.id || null,
-          client_id: selectedClientId || null,
-          issue_date: issueDate,
-          valid_until: validUntil || null,
-          tva_rate: tvaRate,
-          notes: notes || null,
-          items: lines.map((line) => ({
-            product_id: line.product_id || null,
-            description: line.description || "Ligne",
-            qty: Number(line.qty || 1),
-            unit_price: Number(line.unit_price || 0),
-            discount_percent: Number(line.discount_percent || 0),
-            total_ht: 0,
-          })),
-        }),
-      });
+      const payload = {
+        lead_id: initialLead?.id || null,
+        client_id: selectedClientId || null,
+        issue_date: issueDate,
+        valid_until: validUntil || null,
+        tva_rate: tvaRate,
+        notes: notes || null,
+        items: lines.map((line) => ({
+          product_id: line.product_id || null,
+          description: line.description || "Ligne",
+          qty: Number(line.qty || 1),
+          unit_price: Number(line.unit_price || 0),
+          discount_percent: Number(line.discount_percent || 0),
+          total_ht: 0,
+        })),
+      };
+      const created = isEditMode
+        ? await api<Quote>(`/billing/quotes/${quoteId}`, {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          })
+        : await api<Quote>("/billing/quotes", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
       if (sendAfterCreate) {
         await api(`/billing/quotes/${created.id}/send`, { method: "POST" });
         const refreshed = await api<Quote>(`/billing/quotes/${created.id}`);
         onCreated(refreshed);
+        toast.success(`Devis ${refreshed.quote_number} envoyé au client`);
       } else {
         onCreated(created);
+        toast.success(
+          isEditMode
+            ? `Devis ${created.quote_number} mis à jour`
+            : `Devis ${created.quote_number} enregistré`,
+        );
       }
+      router.refresh();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur création devis");
+      const message = err instanceof Error ? err.message : "Erreur de sauvegarde du devis";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -196,7 +246,9 @@ export function QuoteModal({
     <div className="modal-overlay fixed inset-0 z-50 bg-slate-900/50">
       <div className="modal-content modal-panel mx-auto mt-8 w-full max-w-5xl bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900">Nouveau Devis</h2>
+          <h2 className="text-xl font-semibold text-slate-900">
+            {isEditMode ? `Modifier ${editingNumber || "devis"}` : "Nouveau Devis"}
+          </h2>
           <Button variant="ghost" onClick={onClose}>Fermer</Button>
         </div>
         <div className="mb-3 h-1.5 w-full rounded-full bg-slate-100">
@@ -355,7 +407,7 @@ export function QuoteModal({
           <Button variant="ghost" onClick={onClose}>Annuler</Button>
           <Button variant="secondary" disabled={saving || !selectedClientId} onClick={() => submit(false)}>
             <Save size={14} />
-            Enregistrer brouillon
+            {isEditMode ? "Enregistrer les modifications" : "Enregistrer brouillon"}
           </Button>
           <Button disabled={saving || !selectedClientId} onClick={() => submit(true)}>
             <Send size={14} />

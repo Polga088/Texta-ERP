@@ -2,22 +2,34 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Account, Invoice, Quote } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { QuoteModal } from "@/components/billing/quote-modal";
 
 function formatMoney(value: number): string {
   return `${new Intl.NumberFormat("fr-MA").format(value || 0)} MAD`;
 }
 
 export default function QuoteDetailPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id as string;
   const [quote, setQuote] = useState<Quote | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [error, setError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState<null | {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    variant: "primary" | "danger" | "warning";
+    onConfirm: () => Promise<void> | void;
+  }>(null);
 
   const load = useCallback(async () => {
     try {
@@ -29,7 +41,9 @@ export default function QuoteDetailPage() {
       }
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur chargement devis");
+      const message = err instanceof Error ? err.message : "Erreur chargement devis";
+      setError(message);
+      toast.error(message);
     }
   }, [id]);
 
@@ -40,11 +54,26 @@ export default function QuoteDetailPage() {
   if (!quote) return <div className="p-4 text-sm text-slate-500">Chargement...</div>;
 
   const convert = async () => {
-    const ok = window.confirm("Êtes-vous sûr ?");
-    if (!ok) return;
     const invoice = await api<Invoice>(`/billing/quotes/${quote.id}/convert-to-invoice`, { method: "POST" });
-    window.alert(`Facture ${invoice.invoice_number} créée avec succès`);
-    window.location.href = `/invoices/${invoice.id}`;
+    toast.success(`Facture ${invoice.invoice_number} créée`, {
+      action: {
+        label: "Voir",
+        onClick: () => router.push(`/invoices/${invoice.id}`),
+      },
+    });
+    router.push(`/invoices/${invoice.id}`);
+  };
+
+  const sendDraftQuote = async () => {
+    await api(`/billing/quotes/${quote.id}/send`, { method: "POST" });
+    toast.success(`Devis ${quote.quote_number} envoyé au client`);
+    await load();
+  };
+
+  const duplicate = async () => {
+    const cloned = await api<Quote>(`/billing/quotes/${quote.id}/duplicate`, { method: "POST" });
+    toast.success(`Devis ${cloned.quote_number} dupliqué`);
+    router.push(`/quotes/${cloned.id}`);
   };
 
   return (
@@ -96,12 +125,54 @@ export default function QuoteDetailPage() {
           <Card className="sticky top-24">
             <h2 className="mb-3 text-lg font-semibold">Actions rapides</h2>
             <div className="space-y-2">
-              {quote.status === "draft" && <Button className="w-full" onClick={() => api(`/billing/quotes/${quote.id}/send`, { method: "POST" }).then(load)}>Envoyer</Button>}
+              {quote.status === "draft" && <Button className="w-full" onClick={() => void sendDraftQuote()}>Envoyer</Button>}
+              {quote.status === "draft" && <Button className="w-full" variant="secondary" onClick={() => setEditOpen(true)}>Modifier le devis</Button>}
               {(quote.status === "sent" || quote.status === "accepted") && (
-                <Button className="w-full" onClick={convert}>Convertir en facture</Button>
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    setConfirmState({
+                      title: "Convertir en facture ?",
+                      description: `Le devis ${quote.quote_number} sera converti en facture.`,
+                      confirmLabel: "Convertir",
+                      variant: "primary",
+                      onConfirm: async () => {
+                        await convert();
+                        setConfirmState(null);
+                      },
+                    })
+                  }
+                >
+                  Convertir en facture
+                </Button>
+              )}
+              {quote.status !== "draft" && (
+                <Button className="w-full" variant="secondary" onClick={() => void duplicate()}>
+                  Dupliquer le devis
+                </Button>
               )}
               <Button variant="secondary" className="w-full" onClick={() => window.open(`/api/v1/billing/quotes/${quote.id}/pdf`, "_blank")}>Télécharger PDF</Button>
-              {quote.status === "draft" && <Button variant="ghost" className="w-full" onClick={() => api(`/billing/quotes/${quote.id}`, { method: "DELETE" }).then(() => (window.location.href = "/quotes"))}>Supprimer</Button>}
+              {quote.status === "draft" && (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() =>
+                    setConfirmState({
+                      title: "Supprimer le devis ?",
+                      description: `Le devis ${quote.quote_number} sera supprimé définitivement.`,
+                      confirmLabel: "Supprimer",
+                      variant: "danger",
+                      onConfirm: async () => {
+                        await api(`/billing/quotes/${quote.id}`, { method: "DELETE" });
+                        toast.warning("Devis supprimé");
+                        router.push("/quotes");
+                      },
+                    })
+                  }
+                >
+                  Supprimer
+                </Button>
+              )}
             </div>
           </Card>
           <Card>
@@ -114,6 +185,27 @@ export default function QuoteDetailPage() {
         </div>
       </div>
       {error && <p className="text-sm text-rose-600">{error}</p>}
+      <ConfirmDialog
+        isOpen={!!confirmState}
+        title={confirmState?.title || ""}
+        description={confirmState?.description || ""}
+        confirmLabel={confirmState?.confirmLabel}
+        variant={confirmState?.variant}
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => void confirmState?.onConfirm()}
+      />
+      {editOpen && (
+        <QuoteModal
+          open={editOpen}
+          quoteId={quote.id}
+          onClose={() => setEditOpen(false)}
+          onCreated={() => {
+            setEditOpen(false);
+            void load();
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

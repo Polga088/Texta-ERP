@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Account, Invoice, Lead, Quote } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { QuoteModal } from "@/components/billing/quote-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 function formatMoney(value: number): string {
   return `${new Intl.NumberFormat("fr-MA").format(value || 0)} MAD`;
@@ -23,6 +26,7 @@ function quoteStatusBadge(status: Quote["status"]): string {
 }
 
 export default function QuotesPage() {
+  const router = useRouter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -37,6 +41,13 @@ export default function QuotesPage() {
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [error, setError] = useState("");
+  const [confirmState, setConfirmState] = useState<null | {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    variant: "primary" | "danger" | "warning";
+    onConfirm: () => Promise<void> | void;
+  }>(null);
 
   const load = async () => {
     try {
@@ -52,7 +63,9 @@ export default function QuotesPage() {
       setLeads(leadRows);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur de chargement");
+      const message = err instanceof Error ? err.message : "Erreur de chargement";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -111,27 +124,37 @@ export default function QuotesPage() {
       setLeadModalOpen(false);
       setSelectedLeadId("");
       await load();
+      toast.success("Devis créé depuis lead");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur création depuis lead");
+      const message = err instanceof Error ? err.message : "Erreur création depuis lead";
+      setError(message);
+      toast.error(message);
     }
   };
 
   const sendQuote = async (quoteId: string) => {
     await api(`/billing/quotes/${quoteId}/send`, { method: "POST" });
     await load();
-  };
-
-  const convertQuote = async (quoteId: string) => {
-    const ok = window.confirm("Êtes-vous sûr de convertir ce devis en facture ?");
-    if (!ok) return;
-    const invoice = await api<Invoice>(`/billing/quotes/${quoteId}/convert-to-invoice`, { method: "POST" });
-    window.alert(`Facture ${invoice.invoice_number} créée avec succès`);
-    window.location.href = `/invoices/${invoice.id}`;
+    toast.success("Devis envoyé au client");
   };
 
   const deleteQuote = async (quoteId: string) => {
     await api(`/billing/quotes/${quoteId}`, { method: "DELETE" });
     await load();
+    toast.warning("Devis supprimé");
+  };
+
+  const convertQuote = async (quoteId: string) => {
+    const invoice = await api<Invoice>(`/billing/quotes/${quoteId}/convert-to-invoice`, { method: "POST" });
+    toast.success(`Facture ${invoice.invoice_number} créée`, {
+      description: "Redirection vers la facture...",
+      action: {
+        label: "Voir",
+        onClick: () => router.push(`/invoices/${invoice.id}`),
+      },
+      duration: 5000,
+    });
+    router.push(`/invoices/${invoice.id}`);
   };
 
   return (
@@ -224,10 +247,43 @@ export default function QuotesPage() {
                     )}
                     <Button size="sm" variant="ghost" onClick={() => window.open(`/api/v1/billing/quotes/${quote.id}/pdf`, "_blank")}>PDF</Button>
                     {quote.status === "accepted" && (
-                      <Button size="sm" onClick={() => convertQuote(quote.id)}>Convertir en facture</Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setConfirmState({
+                            title: "Convertir en facture ?",
+                            description: `Cette action créera une facture à partir du devis ${quote.quote_number}.`,
+                            confirmLabel: "Convertir",
+                            variant: "primary",
+                            onConfirm: async () => {
+                              await convertQuote(quote.id);
+                              setConfirmState(null);
+                            },
+                          })
+                        }
+                      >
+                        Convertir en facture
+                      </Button>
                     )}
                     {quote.status === "draft" && (
-                      <Button size="sm" variant="ghost" onClick={() => deleteQuote(quote.id)}>Supprimer</Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setConfirmState({
+                            title: "Supprimer le devis ?",
+                            description: `Le devis ${quote.quote_number} sera supprimé définitivement.`,
+                            confirmLabel: "Supprimer",
+                            variant: "danger",
+                            onConfirm: async () => {
+                              await deleteQuote(quote.id);
+                              setConfirmState(null);
+                            },
+                          })
+                        }
+                      >
+                        Supprimer
+                      </Button>
                     )}
                   </div>
                 </td>
@@ -266,6 +322,15 @@ export default function QuotesPage() {
         </div>
       )}
       {error && <p className="text-sm text-rose-600">{error}</p>}
+      <ConfirmDialog
+        isOpen={!!confirmState}
+        title={confirmState?.title || ""}
+        description={confirmState?.description || ""}
+        confirmLabel={confirmState?.confirmLabel}
+        variant={confirmState?.variant}
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => void confirmState?.onConfirm()}
+      />
     </div>
   );
 }

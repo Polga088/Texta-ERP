@@ -425,8 +425,8 @@ async def update_quote(
     quote = await db.get(Quote, quote_id)
     if not quote or quote.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Devis introuvable")
-    if quote.status == QuoteStatus.ACCEPTED:
-        raise HTTPException(status_code=400, detail="Un devis accepte ne peut pas etre modifie")
+    if quote.status != QuoteStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Seuls les devis en brouillon peuvent etre modifies")
     payload = data.model_dump(exclude_unset=True)
     if payload.get("items") is not None or payload.get("tva_rate") is not None:
         items = await _normalize_items(db, user.organization_id, payload.get("items") or quote.items)
@@ -443,6 +443,55 @@ async def update_quote(
         setattr(quote, key, value)
     await db.flush()
     return quote
+
+
+@router.put("/quotes/{quote_id}", response_model=QuoteResponse)
+async def replace_quote(
+    quote_id: UUID,
+    data: QuoteUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    return await update_quote(quote_id=quote_id, data=data, db=db, user=user)
+
+
+@router.post("/quotes/{quote_id}/duplicate", response_model=QuoteResponse, status_code=201)
+async def duplicate_quote(
+    quote_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    original = await db.get(Quote, quote_id)
+    if not original or original.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Devis introuvable")
+    quote_number = await _next_document_number(
+        db,
+        user.organization_id,
+        prefix="DEV",
+        field_name="quote_number",
+        model=Quote,
+        issue_date=date.today(),
+    )
+    cloned_items = [dict(item) for item in original.items]
+    cloned = Quote(
+        organization_id=user.organization_id,
+        created_by_id=user.id,
+        quote_number=quote_number,
+        lead_id=original.lead_id,
+        client_id=original.client_id,
+        issue_date=date.today(),
+        valid_until=date.today() + timedelta(days=30),
+        items=cloned_items,
+        total_ht=original.total_ht,
+        tva_rate=original.tva_rate,
+        tva_amount=original.tva_amount,
+        total_ttc=original.total_ttc,
+        status=QuoteStatus.DRAFT,
+        notes=original.notes,
+    )
+    db.add(cloned)
+    await db.flush()
+    return cloned
 
 
 @router.post("/quotes/{lead_id}/from-lead", response_model=QuoteResponse, status_code=201)

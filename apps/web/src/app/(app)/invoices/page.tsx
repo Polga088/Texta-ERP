@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Account, Invoice, Payment, Quote } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,7 @@ function invoiceStatusBadge(status: Invoice["status"]): string {
 }
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -48,7 +51,9 @@ export default function InvoicesPage() {
       setPayments(paymentRows);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur chargement factures");
+      const message = err instanceof Error ? err.message : "Erreur chargement factures";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -90,16 +95,19 @@ export default function InvoicesPage() {
   const sendInvoice = async (invoiceId: string) => {
     await api(`/billing/invoices/${invoiceId}/send`, { method: "POST" });
     await load();
+    toast.success("Facture envoyée");
   };
 
   const cancelInvoice = async (invoiceId: string) => {
     await api(`/billing/invoices/${invoiceId}/cancel`, { method: "POST" });
     await load();
+    toast.warning("Facture annulée");
   };
 
   const deleteInvoice = async (invoiceId: string) => {
     await api(`/billing/invoices/${invoiceId}`, { method: "DELETE" });
     await load();
+    toast.warning("Facture supprimée");
   };
 
   const createFromQuote = async () => {
@@ -107,8 +115,15 @@ export default function InvoicesPage() {
     const invoice = await api<Invoice>(`/billing/quotes/${selectedQuoteId}/convert-to-invoice`, { method: "POST" });
     setCreateFromQuoteOpen(false);
     setSelectedQuoteId("");
-    window.alert(`Facture ${invoice.invoice_number} créée avec succès`);
-    window.location.href = `/invoices/${invoice.id}`;
+    toast.success(`Facture ${invoice.invoice_number} créée`, {
+      description: "Redirection vers la facture...",
+      action: {
+        label: "Voir",
+        onClick: () => router.push(`/invoices/${invoice.id}`),
+      },
+      duration: 5000,
+    });
+    router.push(`/invoices/${invoice.id}`);
   };
 
   return (
