@@ -20,7 +20,7 @@ from src.core.config import get_settings
 from src.core.database import get_db
 from src.core.deps import get_current_user
 from src.models.billing import BillingAttachment, Invoice, InvoiceStatus, Payment, Product, Quote, QuoteStatus
-from src.models.crm import Lead, LeadStatus
+from src.models.crm import Account, Lead, LeadStatus
 from src.models.organization import User
 from src.schemas.billing import (
     BillingAttachmentResponse,
@@ -38,6 +38,7 @@ from src.schemas.billing import (
     QuoteUpdate,
 )
 from src.services.audit import log_audit
+from src.services.pdf_generator import build_commercial_pdf
 
 router = APIRouter()
 settings = get_settings()
@@ -354,6 +355,18 @@ async def list_quotes(
     return result.scalars().all()
 
 
+@router.get("/quotes/{quote_id}", response_model=QuoteResponse)
+async def get_quote(
+    quote_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    quote = await db.get(Quote, quote_id)
+    if not quote or quote.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Devis introuvable")
+    return quote
+
+
 @router.post("/quotes", response_model=QuoteResponse, status_code=201)
 async def create_quote(
     data: QuoteCreate,
@@ -583,16 +596,32 @@ async def download_quote_pdf(
     quote = await db.get(Quote, quote_id)
     if not quote or quote.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Devis introuvable")
-    payload = _build_pdf_document(
-        title="Devis client",
-        document_number=quote.quote_number,
-        issue_date=quote.issue_date,
-        due_date=quote.valid_until,
-        items=quote.items,
-        total_ht=float(quote.total_ht),
-        tva_amount=float(quote.tva_amount),
-        total_ttc=float(quote.total_ttc),
-    )
+    account = await db.get(Account, quote.client_id) if quote.client_id else None
+    try:
+        payload = build_commercial_pdf(
+            title="DEVIS",
+            number=quote.quote_number,
+            issue_date=quote.issue_date,
+            valid_until=quote.valid_until,
+            client_name=account.name if account else "Client",
+            client_meta=f"Client ID: {quote.client_id}" if quote.client_id else "Client non renseigne",
+            items=quote.items,
+            total_ht=quote.total_ht,
+            tva_rate=quote.tva_rate,
+            tva_amount=quote.tva_amount,
+            total_ttc=quote.total_ttc,
+        )
+    except Exception:
+        payload = _build_pdf_document(
+            title="Devis client",
+            document_number=quote.quote_number,
+            issue_date=quote.issue_date,
+            due_date=quote.valid_until,
+            items=quote.items,
+            total_ht=float(quote.total_ht),
+            tva_amount=float(quote.tva_amount),
+            total_ttc=float(quote.total_ttc),
+        )
     filename = f"{quote.quote_number}.pdf"
     return Response(
         content=payload,
@@ -647,6 +676,18 @@ async def list_overdue_invoices(
     for invoice in invoices:
         invoice.status = InvoiceStatus.OVERDUE
     return invoices
+
+
+@router.get("/invoices/{invoice_id}", response_model=InvoiceResponse)
+async def get_invoice(
+    invoice_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    invoice = await db.get(Invoice, invoice_id)
+    if not invoice or invoice.organization_id != user.organization_id:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    return invoice
 
 
 @router.post("/invoices", response_model=InvoiceResponse, status_code=201)
@@ -784,16 +825,32 @@ async def download_invoice_pdf(
     invoice = await db.get(Invoice, invoice_id)
     if not invoice or invoice.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Facture introuvable")
-    payload = _build_pdf_document(
-        title="Facture client",
-        document_number=invoice.invoice_number,
-        issue_date=invoice.issue_date,
-        due_date=invoice.due_date,
-        items=invoice.items,
-        total_ht=float(invoice.total_ht),
-        tva_amount=float(invoice.tva_amount),
-        total_ttc=float(invoice.total_ttc),
-    )
+    account = await db.get(Account, invoice.client_id) if invoice.client_id else None
+    try:
+        payload = build_commercial_pdf(
+            title="FACTURE",
+            number=invoice.invoice_number,
+            issue_date=invoice.issue_date,
+            valid_until=invoice.due_date,
+            client_name=account.name if account else "Client",
+            client_meta=f"Client ID: {invoice.client_id}" if invoice.client_id else "Client non renseigne",
+            items=invoice.items,
+            total_ht=invoice.total_ht,
+            tva_rate=invoice.tva_rate,
+            tva_amount=invoice.tva_amount,
+            total_ttc=invoice.total_ttc,
+        )
+    except Exception:
+        payload = _build_pdf_document(
+            title="Facture client",
+            document_number=invoice.invoice_number,
+            issue_date=invoice.issue_date,
+            due_date=invoice.due_date,
+            items=invoice.items,
+            total_ht=float(invoice.total_ht),
+            tva_amount=float(invoice.tva_amount),
+            total_ttc=float(invoice.total_ttc),
+        )
     filename = f"{invoice.invoice_number}.pdf"
     return Response(
         content=payload,
