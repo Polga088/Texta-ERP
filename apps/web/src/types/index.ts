@@ -378,6 +378,8 @@ export interface Lead {
   lost_reason?: "price_too_high" | "wrong_timing" | "competitor" | "no_budget" | "internal_decision" | "other";
   lost_competitor?: string;
   notes?: string;
+  account_id?: string;
+  contact_id?: string;
 }
 
 export interface LeadKpis {
