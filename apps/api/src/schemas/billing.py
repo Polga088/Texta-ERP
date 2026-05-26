@@ -17,6 +17,7 @@ class BillingItem(BaseModel):
     unit_price: float = Field(default=0, ge=0)
     discount_percent: float = Field(default=0, ge=0, le=100)
     total_ht: float = Field(default=0, ge=0)
+    sort_order: int = Field(default=0, ge=0)
 
 
 class ProductCreate(BaseModel):

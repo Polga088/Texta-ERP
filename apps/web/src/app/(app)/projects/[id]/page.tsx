@@ -8,6 +8,7 @@ import { Grant, Project } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { FileUpload } from "@/components/ui/file-upload";
 
 const STATUS_FR: Record<string, string> = {
   lead: "Prospect",
@@ -187,6 +188,12 @@ export default function ProjectDetailPage() {
           </ul>
         </Card>
       </div>
+      <Card>
+        <CardTitle className="text-base">Documents projet</CardTitle>
+        <div className="mt-3">
+          <FileUpload entityType="project" entityId={project.id} />
+        </div>
+      </Card>
     </div>
   );
 }

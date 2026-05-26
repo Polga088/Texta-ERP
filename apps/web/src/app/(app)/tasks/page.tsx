@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { FileUpload } from "@/components/ui/file-upload";
 
 const STATUS_LABELS: Record<string, string> = {
   todo: "À faire",
@@ -716,17 +717,7 @@ export default function TasksPage() {
             )}
 
             {drawerTab === "documents" && (
-              <div className="space-y-2">
-                {(drawerTask.attachments || []).length === 0 ? (
-                  <p className="text-sm text-slate-500">Aucune pièce jointe.</p>
-                ) : (
-                  (drawerTask.attachments || []).map((doc) => (
-                    <div key={doc} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                      {doc}
-                    </div>
-                  ))
-                )}
-              </div>
+              <FileUpload entityType="task" entityId={drawerTask.id} />
             )}
 
             {drawerTab === "history" && (

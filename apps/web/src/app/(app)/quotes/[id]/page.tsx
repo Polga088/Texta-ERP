@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { QuoteModal } from "@/components/billing/quote-modal";
+import { FileUpload } from "@/components/ui/file-upload";
 
 function formatMoney(value: number): string {
   return `${new Intl.NumberFormat("fr-MA").format(value || 0)} MAD`;
@@ -119,6 +120,10 @@ export default function QuoteDetailPage() {
             <p className="text-sm text-slate-600">HT: {formatMoney(Number(quote.total_ht))}</p>
             <p className="text-sm text-slate-600">TVA: {formatMoney(Number(quote.tva_amount))}</p>
             <p className="text-xl font-bold text-violet-700">TTC: {formatMoney(Number(quote.total_ttc))}</p>
+          </Card>
+          <Card>
+            <h2 className="mb-2 text-lg font-semibold">Documents</h2>
+            <FileUpload entityType="quote" entityId={quote.id} />
           </Card>
         </div>
         <div className="space-y-4">

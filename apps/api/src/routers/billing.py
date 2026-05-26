@@ -151,7 +151,7 @@ async def _normalize_items(
     items: list[dict],
 ) -> list[dict]:
     normalized: list[dict] = []
-    for item in items:
+    for index, item in enumerate(items):
         current = dict(item)
         product_id = current.get("product_id")
         if product_id:
@@ -163,8 +163,17 @@ async def _normalize_items(
                 current["description"] = product.name
             if not current.get("unit_price"):
                 current["unit_price"] = float(product.unit_price)
+        sort_order = current.get("sort_order")
+        if sort_order is None:
+            current["sort_order"] = index
+        else:
+            current["sort_order"] = int(sort_order)
         normalized.append(current)
-    return normalized
+    return sorted(normalized, key=lambda item: int(item.get("sort_order", 0)))
+
+
+def _sorted_quote_items(items: list[dict]) -> list[dict]:
+    return sorted(items or [], key=lambda item: int(item.get("sort_order", 0)))
 
 
 def _build_pdf_document(
@@ -352,7 +361,10 @@ async def list_quotes(
     if date_to:
         stmt = stmt.where(Quote.issue_date <= date_to)
     result = await db.execute(stmt.order_by(Quote.created_at.desc()))
-    return result.scalars().all()
+    quotes = result.scalars().all()
+    for quote in quotes:
+        quote.items = _sorted_quote_items(quote.items)
+    return quotes
 
 
 @router.get("/quotes/{quote_id}", response_model=QuoteResponse)
@@ -364,6 +376,7 @@ async def get_quote(
     quote = await db.get(Quote, quote_id)
     if not quote or quote.organization_id != user.organization_id:
         raise HTTPException(status_code=404, detail="Devis introuvable")
+    quote.items = _sorted_quote_items(quote.items)
     return quote
 
 
@@ -410,6 +423,7 @@ async def create_quote(
         total_ttc=_to_decimal(total_ttc),
         notes=data.notes,
     )
+    quote.items = _sorted_quote_items(quote.items)
     db.add(quote)
     await db.flush()
     return quote
@@ -432,7 +446,7 @@ async def update_quote(
         items = await _normalize_items(db, user.organization_id, payload.get("items") or quote.items)
         tva_rate = payload.get("tva_rate") or float(quote.tva_rate)
         total_ht, tva_amount, total_ttc = _compute_totals(items, float(tva_rate))
-        quote.items = items
+        quote.items = _sorted_quote_items(items)
         quote.total_ht = _to_decimal(total_ht)
         quote.tva_rate = _to_decimal(float(tva_rate))
         quote.tva_amount = _to_decimal(tva_amount)
@@ -442,6 +456,7 @@ async def update_quote(
             continue
         setattr(quote, key, value)
     await db.flush()
+    quote.items = _sorted_quote_items(quote.items)
     return quote
 
 
@@ -473,6 +488,7 @@ async def duplicate_quote(
         issue_date=date.today(),
     )
     cloned_items = [dict(item) for item in original.items]
+    cloned_items = _sorted_quote_items(cloned_items)
     cloned = Quote(
         organization_id=user.organization_id,
         created_by_id=user.id,
@@ -536,6 +552,7 @@ async def create_quote_from_lead(
                 "unit_price": base_amount,
                 "discount_percent": 0,
                 "total_ht": total_ht,
+                "sort_order": 0,
             }
         ],
         total_ht=_to_decimal(total_ht),
@@ -546,6 +563,7 @@ async def create_quote_from_lead(
     )
     db.add(quote)
     await db.flush()
+    quote.items = _sorted_quote_items(quote.items)
     return quote
 
 

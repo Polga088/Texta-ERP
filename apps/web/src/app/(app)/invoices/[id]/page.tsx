@@ -8,6 +8,7 @@ import { Account, Invoice, Payment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PaymentModal } from "@/components/billing/payment-modal";
+import { FileUpload } from "@/components/ui/file-upload";
 
 function formatMoney(value: number): string {
   return `${new Intl.NumberFormat("fr-MA").format(value || 0)} MAD`;
@@ -97,6 +98,10 @@ export default function InvoiceDetailPage() {
                 ))}
               </ul>
             )}
+          </Card>
+          <Card>
+            <h2 className="mb-2 text-lg font-semibold">Documents</h2>
+            <FileUpload entityType="invoice" entityId={invoice.id} />
           </Card>
         </div>
         <div className="space-y-4">

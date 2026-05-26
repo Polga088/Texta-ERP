@@ -11,6 +11,7 @@ from src.routers import (
     collaboration,
     contacts,
     dashboard,
+    documents,
     grants,
     groups,
     hr,
@@ -39,3 +40,4 @@ api_router.include_router(leads.router, prefix="/leads", tags=["leads"])
 api_router.include_router(collaboration.router, prefix="/collaboration", tags=["collaboration"])
 api_router.include_router(time_tracking.router, prefix="/time-entries", tags=["time-tracking"])
 api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
+api_router.include_router(documents.router, prefix="/documents", tags=["documents"])

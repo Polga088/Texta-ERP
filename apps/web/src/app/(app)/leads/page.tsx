@@ -30,12 +30,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FileUpload } from "@/components/ui/file-upload";
 import { buildProjectPrefillFromLead } from "@/lib/lead-brief";
 
 type LeadStatus = Lead["status"];
 type LeadView = "kanban" | "list";
 type FormTab = "info" | "deal" | "follow";
-type DrawerTab = "info" | "history" | "notes";
+type DrawerTab = "info" | "history" | "notes" | "documents";
 
 const STATUS_ORDER: LeadStatus[] = ["new", "qualified", "proposal", "won", "lost"];
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -748,6 +749,13 @@ export default function LeadsPage() {
               <Button size="sm" variant={drawerTab === "notes" ? "primary" : "secondary"} onClick={() => setDrawerTab("notes")}>
                 📝 Notes
               </Button>
+              <Button
+                size="sm"
+                variant={drawerTab === "documents" ? "primary" : "secondary"}
+                onClick={() => setDrawerTab("documents")}
+              >
+                📎 Documents
+              </Button>
             </div>
             {drawerTab === "info" && (
               <div className="space-y-2 text-sm">
@@ -777,6 +785,7 @@ export default function LeadsPage() {
                 placeholder="Notes sauvegardées automatiquement (debounce 1s)"
               />
             )}
+            {drawerTab === "documents" && <FileUpload entityType="lead" entityId={drawerLead.id} />}
             <div className="mt-5 flex flex-wrap gap-2">
               <a
                 href={drawerLead.contact_phone ? `tel:${drawerLead.contact_phone}` : "#"}

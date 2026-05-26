@@ -429,6 +429,22 @@ export interface BillingItem {
   unit_price: number;
   discount_percent?: number;
   total_ht: number;
+  sort_order?: number;
+}
+
+export interface DocumentFile {
+  id: string;
+  entity_type: "lead" | "project" | "task" | "quote" | "invoice" | "client";
+  entity_id: string;
+  original_filename: string;
+  stored_filename: string;
+  file_path: string;
+  mime_type?: string;
+  file_size: number;
+  uploaded_by_id?: string;
+  uploaded_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProductCatalogItem {

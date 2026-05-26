@@ -5,6 +5,7 @@ from src.models.billing import BillingAttachment, Invoice, Payment, Product, Quo
 from src.models.calendar import CalendarEvent, EventAttendee
 from src.models.collaboration import ChatMessage, Notification
 from src.models.crm import Account, Contact, Lead, Project
+from src.models.document import Document
 from src.models.hr import Department, Employee, LeaveRequest
 from src.models.organization import Group, GroupMember, Organization, User
 from src.models.permissions import ProjectPermissionGrant
@@ -22,6 +23,7 @@ __all__ = [
     "Contact",
     "Lead",
     "Project",
+    "Document",
     "CalendarEvent",
     "EventAttendee",
     "ChatMessage",

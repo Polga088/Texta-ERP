@@ -8,17 +8,9 @@ import { api } from "@/lib/api";
 import { Account, Lead, ProductCatalogItem, Project, Quote } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { QuoteEditorLine, QuoteLinesEditor } from "@/components/billing/quote-lines-editor";
 
 type QuoteStep = "client" | "lines" | "totals" | "preview";
-
-type LineItem = {
-  id: string;
-  product_id?: string;
-  description: string;
-  qty: number;
-  unit_price: number;
-  discount_percent: number;
-};
 
 const STEPS: Array<{ id: QuoteStep; label: string; icon: typeof User }> = [
   { id: "client", label: "Client", icon: User },
@@ -57,8 +49,8 @@ export function QuoteModal({
   const [validUntil, setValidUntil] = useState(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [tvaRate, setTvaRate] = useState(20);
-  const [lines, setLines] = useState<LineItem[]>([
-    { id: crypto.randomUUID(), description: "", qty: 1, unit_price: 0, discount_percent: 0 },
+  const [lines, setLines] = useState<QuoteEditorLine[]>([
+    { id: crypto.randomUUID(), description: "", qty: 1, unit_price: 0, discount_percent: 0, sort_order: 0 },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -95,6 +87,7 @@ export function QuoteModal({
             qty: Number(item.qty || 1),
             unit_price: Number(item.unit_price || 0),
             discount_percent: Number(item.discount_percent || 0),
+            sort_order: Number(item.sort_order || 0),
           })),
         );
       })
@@ -118,6 +111,7 @@ export function QuoteModal({
           qty: 1,
           unit_price: Number(initialLead.deal_value || 0),
           discount_percent: 0,
+          sort_order: 0,
         },
       ]);
     }
@@ -141,8 +135,13 @@ export function QuoteModal({
     return () => window.clearTimeout(timer);
   }, [productSearch, open]);
 
+  const orderedLines = useMemo(
+    () => [...lines].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+    [lines],
+  );
+
   const computed = useMemo(() => {
-    const subtotal = lines.reduce(
+    const subtotal = orderedLines.reduce(
       (sum, line) => sum + line.qty * line.unit_price * (1 - line.discount_percent / 100),
       0,
     );
@@ -152,37 +151,25 @@ export function QuoteModal({
       tvaAmount,
       total: subtotal + tvaAmount,
     };
-  }, [lines, tvaRate]);
+  }, [orderedLines, tvaRate]);
 
   if (!open) return null;
-
-  const upsertLine = (lineId: string, patch: Partial<LineItem>) => {
-    setLines((current) => current.map((line) => (line.id === lineId ? { ...line, ...patch } : line)));
-  };
-
-  const addLine = () => {
-    setLines((current) => [
-      ...current,
-      { id: crypto.randomUUID(), description: "", qty: 1, unit_price: 0, discount_percent: 0 },
-    ]);
-  };
-
-  const removeLine = (lineId: string) => {
-    setLines((current) =>
-      current.length <= 1
-        ? current
-        : current.filter((line) => line.id !== lineId),
-    );
-  };
 
   const selectProductForLine = (lineId: string, productId: string) => {
     const product = catalog.find((row) => row.id === productId);
     if (!product) return;
-    upsertLine(lineId, {
-      product_id: product.id,
-      description: product.name,
-      unit_price: Number(product.unit_price || 0),
-    });
+    setLines((current) =>
+      current.map((line) =>
+        line.id === lineId
+          ? {
+              ...line,
+              product_id: product.id,
+              description: product.name,
+              unit_price: Number(product.unit_price || 0),
+            }
+          : line,
+      ),
+    );
     setTvaRate(Number(product.tva_rate || tvaRate));
   };
 
@@ -197,13 +184,14 @@ export function QuoteModal({
         valid_until: validUntil || null,
         tva_rate: tvaRate,
         notes: notes || null,
-        items: lines.map((line) => ({
+        items: orderedLines.map((line, index) => ({
           product_id: line.product_id || null,
           description: line.description || "Ligne",
           qty: Number(line.qty || 1),
           unit_price: Number(line.unit_price || 0),
           discount_percent: Number(line.discount_percent || 0),
           total_ht: 0,
+          sort_order: Number(line.sort_order ?? index),
         })),
       };
       const created = isEditMode
@@ -301,64 +289,12 @@ export function QuoteModal({
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
             />
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Description</th>
-                    <th className="px-3 py-2 text-left">Qté</th>
-                    <th className="px-3 py-2 text-left">Prix unit.</th>
-                    <th className="px-3 py-2 text-left">Remise %</th>
-                    <th className="px-3 py-2 text-left">Total</th>
-                    <th className="px-3 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line) => {
-                    const lineTotal = line.qty * line.unit_price * (1 - line.discount_percent / 100);
-                    return (
-                      <tr key={line.id} className="border-t border-slate-100">
-                        <td className="px-3 py-2">
-                          <div className="space-y-2">
-                            <select
-                              className="input-field"
-                              value={line.product_id || ""}
-                              onChange={(e) => selectProductForLine(line.id, e.target.value)}
-                            >
-                              <option value="">Produit (optionnel)</option>
-                              {catalog.map((product) => (
-                                <option key={product.id} value={product.id}>
-                                  {product.sku} — {product.name}
-                                </option>
-                              ))}
-                            </select>
-                            <Input
-                              placeholder="Description"
-                              value={line.description}
-                              onChange={(e) => upsertLine(line.id, { description: e.target.value })}
-                            />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min="1" step="0.5" value={line.qty} onChange={(e) => upsertLine(line.id, { qty: Number(e.target.value || "1") })} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => upsertLine(line.id, { unit_price: Number(e.target.value || "0") })} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min="0" max="100" step="0.01" value={line.discount_percent} onChange={(e) => upsertLine(line.id, { discount_percent: Number(e.target.value || "0") })} />
-                        </td>
-                        <td className="px-3 py-2 font-semibold">{formatMoney(lineTotal)}</td>
-                        <td className="px-3 py-2">
-                          <Button variant="ghost" onClick={() => removeLine(line.id)}>Supprimer</Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <Button variant="secondary" onClick={addLine}>Ajouter une ligne</Button>
+            <QuoteLinesEditor
+              lines={orderedLines}
+              catalog={catalog}
+              onLinesChange={setLines}
+              onSelectProduct={selectProductForLine}
+            />
           </div>
         )}
 
@@ -390,7 +326,7 @@ export function QuoteModal({
               Client: {accounts.find((account) => account.id === selectedClientId)?.name || "—"}
             </p>
             <div className="space-y-2">
-              {lines.map((line) => (
+              {orderedLines.map((line) => (
                 <div key={line.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
                   <span className="text-sm text-slate-700">{line.description || "Ligne"}</span>
                   <span className="text-sm font-semibold text-slate-900">
